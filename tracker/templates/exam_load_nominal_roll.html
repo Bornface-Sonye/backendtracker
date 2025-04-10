@@ -1,0 +1,33 @@
+{% extends 'exam_base_dashboard.html' %}
+
+{% block content %}
+
+
+<div class="container mt-4">
+    <h2>Load Nominal Roll</h2>
+
+    <!-- Display messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert {% if message.tags == 'success' %}alert-success{% elif message.tags == 'error' %}alert-error{% endif %}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-primary">Load Nominal Roll</button>
+    </form>
+
+    <h4>CSV/Excel Format Instructions</h4>
+    <p>Please ensure your file has the following format:</p>
+    <ul>
+        <li><strong>unit_code</strong>: The unit code associated with the nominal roll</li>
+        <li><strong>reg_no</strong>: The registration number of the student</li>
+        <li><strong>academic_year</strong>: The academic year associated with the nominal roll</li>
+    </ul>
+    <p>The file must be in either CSV or Excel format.</p>
+</div>
+{% endblock %}

@@ -1,0 +1,102 @@
+{% extends 'exam_base_dashboard.html' %}
+
+{% block content %}
+<style>
+    /* Sidebar styling */
+    .sidebar-card {
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+
+    .sidebar-header {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #343a40;
+        margin-bottom: 10px;
+    }
+
+    .stat-item {
+        font-size: 1rem;
+        color: #555;
+        margin-bottom: 8px;
+        font-weight: 500;
+    }
+
+    /* Main content styling */
+    .card-header {
+        background-color: #343a40;
+        color: white;
+    }
+
+    .card-footer {
+        background-color: #f8f9fa;
+        font-size: 0.9rem;
+    }
+
+    .list-group-item {
+        border-radius: 5px;
+        margin-bottom: 10px;
+    }
+</style>
+
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-lg-3">
+            <!-- Sidebar Card -->
+            <div class="sidebar-card">
+                <div class="sidebar-header">
+                    <p class="stat-item">Department: {{ department_name }}</p>
+                </div>
+            </div>
+            <div class="sidebar-card">
+                <div class="sidebar-header">
+                    Welcome  Back !!!
+                </div>
+                <div class="sidebar-header">
+                    Welcome, {{ last_name }}
+                </div>
+                <p class="stat-item">Total Students: {{ total_students }}</p>
+                <p class="stat-item">Total Lecturers: {{ total_lecturers_in_department }}</p>
+                <p class="stat-item">Total Units: {{ total_units_for_lecturer }}</p>
+                <p class="stat-item">Total Complaints: {{ related_complaints_count }}</p>
+            </div>
+        </div>
+
+        <div class="col-lg-9">
+            <!-- Main content area -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Department Exam Officer</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Units</h5>
+                            <ul class="list-group">
+                                {% for unit in units %}
+                                <li class="list-group-item">{{ unit.unit_code.unit_name }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+
+                        <div class="col-md-6">
+                            <h5>Courses</h5>
+                            <ul class="list-group">
+                                {% for course in courses %}
+                                <li class="list-group-item">{{ course.course_name }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer text-center">
+                    Powered by Azdak's Software Solution
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

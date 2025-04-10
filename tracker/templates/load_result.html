@@ -1,0 +1,79 @@
+{% extends 'lecturer_base_dashboard.html' %}
+
+{% block content %}
+    <style>
+        /* Styling for content */
+        form {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin: 0 auto;
+            max-width: 600px;
+        }
+
+        form button {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+
+        form button:hover {
+            background-color: #0056b3;
+        }
+
+        .alert {
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            font-size: 16px;
+            text-align: center;
+        }
+
+        .alert.success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .alert.error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .alert.warning {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+    </style>
+
+    <h2>Load Results</h2>
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Load Results</button>
+    </form>
+
+    <h4>CSV/Excel Format Instructions</h4>
+    <p>Please ensure your file has the following format:</p>
+    <ul>
+        <li><strong>unit_code</strong>: The unit code associated with the result</li>
+        <li><strong>reg_no</strong>: The registration number of the student</li>
+        <li><strong>academic_year</strong>: The academic year of the result</li>
+        <li><strong>cat</strong>: The CAT score (integer)</li>
+        <li><strong>exam</strong>: The exam score (integer)</li>
+    </ul>
+    <p>The file must be in either CSV or Excel format.</p>
+    <p>Ensure to put 0 for any missing mark.</p>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert {{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+{% endblock %}

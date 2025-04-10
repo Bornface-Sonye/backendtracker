@@ -1,0 +1,107 @@
+{% extends 'exam_base_dashboard.html' %}
+
+{% block content %}
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background-color: #f0f0f8; /* Light background color */
+        margin: 0; /* Remove default margin */
+        padding: 20px; /* Add padding for the body */
+    }
+    h1 {
+        color: #333; /* Dark color for the main heading */
+        text-align: center; /* Center the main heading */
+        margin-bottom: 20px; /* Space below the heading */
+    }
+    h2 {
+        color: #555; /* Slightly lighter color for subheadings */
+        margin-top: 40px; /* Space above subheadings */
+    }
+    table {
+        width: 100%; /* Full width of the table */
+        border-collapse: collapse; /* Collapse borders */
+        margin-top: 20px; /* Space above the table */
+    }
+    th, td {
+        padding: 8px 12px; /* Padding for cells */
+        border: 1px solid #ccc; /* Light gray border */
+        text-align: left; /* Align text to the left */
+    }
+    th {
+        background-color: #f4f4f4; /* Light gray background for headers */
+        font-weight: bold; /* Bold text for headers */
+        color: #333; /* Dark text color for headers */
+    }
+    tr:nth-child(even) {
+        background-color: #f9f9f9; /* Light background for even rows */
+    }
+    tr:hover {
+        background-color: #e0e0e0; /* Highlight row on hover */
+    }
+    a {
+        text-decoration: none; /* Remove underline from links */
+        color: #007bff; /* Bootstrap primary color */
+        font-weight: bold; /* Bold links for emphasis */
+    }
+    a:hover {
+        text-decoration: underline; /* Underline links on hover */
+    }
+    /* Responsive design adjustments */
+    @media (max-width: 600px) {
+        table {
+            font-size: 14px; /* Smaller font size for small screens */
+        }
+        th, td {
+            padding: 6px 8px; /* Reduced padding for smaller screens */
+        }
+    }
+</style>
+
+<h1>Complaints</h1>
+
+<!-- Display success message -->
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-success" style="color: green; text-align: center; margin-bottom: 20px;">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+<!-- Complaints Table -->
+<h2>Complaints Posted</h2>
+<table>
+    <thead>
+        <tr>
+            <th>Complaint Code</th>
+            <th>Academic Year</th>
+            <th>Registration Number</th>
+            <th>Unit Code</th>
+            <th>Missing Mark</th>
+            <th>Main Exam Date</th>
+            <th>Complainant</th>
+            <th>Date Posted</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for complaint in complaints %}
+            <tr>
+                <td>{{ complaint.complaint_code }}</td>
+                <td>{{ complaint.academic_year }}</td>
+                <td>{{ complaint.reg_no }}</td>
+                <td>{{ complaint.unit_code }}</td>
+                <td>{{ complaint.missing_mark }}</td>
+                <td>{{ complaint.exam_date }}</td>
+                <td>{{ complaint.complainant }}</td>
+                <td>{{ complaint.date }}</td>
+                <td><a href="{% url 'exam-response-form' complaint_code=complaint.complaint_code %}">Respond</a></td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="9" style="text-align: center;">No complaints found.</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

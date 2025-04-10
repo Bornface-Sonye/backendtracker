@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h2>Submit Missing Mark Complaint</h2>
+
+    {% if messages %}
+        <div id="message-container">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <select name="unit_offering" required>
+            {% for unit in units %}
+                <option value="{{ unit.id }}">{{ unit.unit.unit_code }} - {{ unit.unit.unit_name }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit">Submit Complaint</button>
+    </form>
+{% endblock %}

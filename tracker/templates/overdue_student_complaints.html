@@ -1,0 +1,108 @@
+{% extends 'cod_base_dashboard.html' %}
+
+{% block content %}
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #343a40;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+
+        table {
+            width: 100%;
+            margin: 20px 0;
+            border-collapse: collapse;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            background-color: white;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        th {
+            background-color: #007bff;
+            color: white;
+            font-weight: bold;
+        }
+
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+
+        p {
+            text-align: center;
+            font-size: 1.2em;
+            color: #6c757d;
+        }
+
+        /* Responsive design for smaller screens */
+        @media (max-width: 768px) {
+            table {
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+        }
+    </style>
+
+    <h1>Overdue Complaints</h1>
+    
+    {% if overdue_complaints %}
+        <!-- Complaint Details Table -->
+        <h2>Complaint Details</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Reg No</th>
+                    <th>Unit Code</th>
+                    <th>Academic Year</th>
+                    <th>Course Code</th>
+                    <th>Department Code</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for complaint in overdue_complaints %}
+                    <tr>
+                        <td>{{ complaint.reg_no.reg_no }}</td>
+                        <td>{{ complaint.unit_code.unit_code }}</td>
+                        <td>{{ complaint.academic_year.academic_year }}</td>
+                        <td>{{ complaint.reg_no.course_code.course_code }}</td>
+                        <td>{{ complaint.reg_no.course_code.dep_code.dep_code }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Lecturer Contact Information Table -->
+        <h2>Lecturer Contact Information</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Lecturer Email</th>
+                    <th>Lecturer Phone</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lecturer in overdue_lecturers %}
+                    <tr>
+                        <td>{{ lecturer.email_address }}</td>
+                        <td>{{ lecturer.phone_number }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No overdue complaints found.</p>
+    {% endif %}
+{% endblock %}

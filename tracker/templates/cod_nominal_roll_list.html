@@ -1,0 +1,53 @@
+{% extends 'cod_base_dashboard.html' %}
+
+{% block content %}
+
+<div class="container mt-5">
+    <h2>Nominal Roll</h2>
+
+    <!-- Filter Form -->
+    <form method="get" class="filter-form">
+        <label>Academic Year:</label>
+        <select name="academic_year" class="form-control">
+            <option value="">All</option>
+            {% for year in academic_years %}
+                <option value="{{ year.academic_year }}" {% if request.GET.academic_year == year.academic_year %}selected{% endif %}>{{ year.academic_year }}</option>
+            {% endfor %}
+        </select>
+
+        <label>Unit Code:</label>
+        <input type="text" name="unit_code" value="{{ request.GET.unit_code }}" class="form-control" style="width: 150px;">
+
+        <label>Reg No:</label>
+        <input type="text" name="reg_no" value="{{ request.GET.reg_no }}" class="form-control" style="width: 150px;">
+
+        <button type="submit" class="btn btn-primary" style="margin-left: 10px;">Filter</button>
+    </form>
+
+    <!-- Nominal Roll Table with Sort Links -->
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th><a href="?sort=reg_no" style="color: white; text-decoration: none;">Student Reg No</a></th>
+                <th><a href="?sort=unit_code" style="color: white; text-decoration: none;">Unit Code</a></th>
+                <th><a href="?sort=academic_year" style="color: white; text-decoration: none;">Academic Year</a></th>
+                <th><a href="?sort=date" style="color: white; text-decoration: none;">Date Added</a></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for nominal_roll in nominal_rolls %}
+                <tr>
+                    <td>{{ nominal_roll.reg_no }}</td>
+                    <td>{{ nominal_roll.unit_code }}</td>
+                    <td>{{ nominal_roll.academic_year }}</td>
+                    <td>{{ nominal_roll.date }}</td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="4" class="no-results">No nominal roll entries found.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+ </div>
+ {% endblock %}

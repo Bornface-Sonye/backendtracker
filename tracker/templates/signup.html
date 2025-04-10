@@ -1,0 +1,87 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Mark | Tracker</title>
+    <!-- Favicons -->
+    <link rel="shortcut icon" href="{% static 'img/favicon.ico' %}" type="image/x-icon">
+    <link rel="apple-touch-icon" href="{% static 'img/mmust-logo.png' %}">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <link href="https://fonts.googleapis.com/css?family=Lato:300,400,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="{% static 'css/global/style.css' %}">
+</head>
+<body>
+<section class="ftco-section">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-6 text-center mb-5">
+                <h2 class="heading-section">Missing Mark Tracker</h2>
+            </div>
+        </div>
+        <div class="row justify-content-center">
+            <div class="col-md-12 col-lg-10">
+                <div class="wrap d-md-flex">
+                    <!-- Background image section with centered text -->
+                    <div class="img" style="background-image: url('{% static "img/bg-7.jpg" %}'); position: relative; height: 100vh;">
+                        <div style="position: absolute; top: 50%; width: 100%; transform: translateY(-50%); font-family: 'Lato', sans-serif; color: #ffffff; font-size: 39px; font-weight: bold; text-shadow: 4px 4px 7px rgba(0,0,0,0.7); text-align: center;">
+                            UNIVERSITY  OF  CHOICE
+                        </div>
+                    </div>
+                    <div class="login-wrap p-4 p-md-5">
+                        <div class="d-flex">
+                            <div class="w-100">
+                                <h2 class="mb-4">Sign In</h2>
+                            </div>
+                            <div class="w-100">
+                                <p class="social-media d-flex justify-content-end">
+                                    <a href="#" class="social-icon d-flex align-items-center justify-content-center"><span class="fa fa-facebook"></span></a>
+                                    <a href="#" class="social-icon d-flex align-items-center justify-content-center"><span class="fa fa-twitter"></span></a>
+                                </p>
+                            </div>
+                        </div>
+                        <div>
+                            <form method="post" action="{% url 'signup' %}" id="registration">
+                                {% csrf_token %}
+                                {% if form.errors %}
+                                <div class="alert alert-danger" role="alert">
+                                    {% for field, error_list in form.errors.items %}
+                                        {% for error in error_list %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                                {% for field in form %}
+                                    <div class="form-group">
+                                        <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                                        {{ field }}
+                                        {% if field.errors %}
+                                            <span id="{{ field.id_for_label|slugify }}-error" class="error-message text-danger">
+                                                {{ field.errors.as_text }}
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                                <button type="submit" class="form-control btn btn-primary rounded submit px-3">Sign Up</button>
+                            </form>
+                            <br>
+                            <p class="text-center">Already Have an Account? <a href="{% url 'login' %}">Sign In</a></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- JavaScript files -->
+<script src="{% static 'js/login/jquery.min.js' %}"></script>
+<script src="{% static 'js/login/popper.js' %}"></script>
+<script src="{% static 'js/login/bootstrap.min.js' %}"></script>
+<script src="{% static 'js/login/main.js' %}"></script>
+
+</body>
+</html>
