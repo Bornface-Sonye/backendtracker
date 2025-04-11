@@ -157,6 +157,78 @@ class Complaint(models.Model):
     def __str__(self):
         return f"{self.complaint_code} - {self.student} - {self.missing_type}"
 
+class NominalRoll(models.Model):
+    unit_code = models.ForeignKey(Unit, on_delete=models.CASCADE)
+    reg_no = models.ForeignKey(Student, on_delete=models.CASCADE)
+    academic_year = models.ForeignKey(AcademicYear, on_delete=models.CASCADE)
+    date = models.DateField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['unit_code', 'reg_no', 'academic_year'],
+                name='unique_nominal_roll_per_unit_student_year'
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.reg_no} - {self.unit_code} - {self.academic_year}"
+
+    def clean(self):
+        # Additional custom validation can be added here if needed
+        if not self.unit_code or not self.reg_no or not self.academic_year:
+            raise ValidationError("Unit code, student registration number, and academic year must be provided.")
+
+    def save(self, *args, **kwargs):
+        # Call clean method to perform validations before saving
+        self.clean()
+        super().save(*args, **kwargs)
+
+class Result(models.Model):
+    unit_code = models.ForeignKey(Unit, on_delete=models.CASCADE)
+    reg_no = models.ForeignKey(Student, on_delete=models.CASCADE)
+    academic_year = models.ForeignKey(AcademicYear, on_delete=models.CASCADE)
+    cat = models.IntegerField(
+        null=True, 
+        blank=True, 
+        validators=[MinValueValidator(0), MaxValueValidator(30)]
+    )
+    exam = models.IntegerField(
+        null=True, 
+        blank=True, 
+        validators=[MinValueValidator(0), MaxValueValidator(70)]
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['unit_code', 'reg_no', 'academic_year'],
+                name='unique_result_per_unit_student_year'
+            )
+        ]
+
+    @property
+    def total(self):
+        return (self.cat or 0) + (self.exam or 0)
+
+    def __str__(self):
+        return f"{self.reg_no} - {self.unit_code} - {self.academic_year}"
+
+    def clean(self):
+        if not self.unit_code or not self.reg_no or not self.academic_year or not self.cat or not self.exam:
+            raise ValidationError("Unit code, student registration number, cat, exam, and academic year must be provided.")
+        # Custom validation to ensure cat and exam fields are within range
+        if self.cat and not (0 <= self.cat <= 30):
+            raise ValidationError({'cat': 'CAT marks should be between 0 and 30.'})
+        if self.exam and not (0 <= self.exam <= 70):
+            raise ValidationError({'exam': 'Exam marks should be between 0 and 70.'})
+
+    def save(self, *args, **kwargs):
+        # Call clean method to perform validations before saving
+        self.clean()
+        super().save(*args, **kwargs)
+        
+    
 class Response(models.Model):
     complaint = models.OneToOneField(Complaint, on_delete=models.CASCADE, primary_key=True)
     cat_mark = models.IntegerField(null=True, blank=True)  # 0-30
