@@ -4,10 +4,12 @@ from .views import (
     SignUpView, LoginView, COD_DashboardView, Exam_DashboardView, Lecturer_DashboardView, LogoutView, StudentSelectView, 
     MissingMarkSelectView, COD_NominalRollListView, COD_ResultListView, COD_LoadResultView, COD_LoadNominalRollView,
     Exam_NominalRollListView, Exam_ResultListView, Exam_LoadResultView, Exam_LoadNominalRollView, NominalRollListView,
-    ResultListView, LoadResultView, LoadNominalRollView, CodComplaintsView, AssignLecturerView, CodRespondView
+    ResultListView, LoadResultView, LoadNominalRollView, CodComplaintsView, AssignLecturerView, CodRespondView,
+    LecturerComplaintsListView, LecturerRespondView
     
     
 )
+
 
 urlpatterns = [
     path('student/', StudentSelectView.as_view(), name='student'),
@@ -42,4 +44,7 @@ urlpatterns = [
     path('cod/complaints/', CodComplaintsView.as_view(), name='cod-complaints'),
     path('cod/complaints/<str:complaint_code>/assign/', AssignLecturerView.as_view(), name='assign-lecturer'),
     path('cod/complaints/<str:complaint_code>/respond/', CodRespondView.as_view(), name='cod-respond'),
+    
+    path('lecturer/complaints/', LecturerComplaintsListView.as_view(), name='lecturer-complaints'),
+    path('lecturer/complaint/<str:complaint_code>/respond/', LecturerRespondView.as_view(), name='lecturer-respond-to-complaint'),
 ]

@@ -1,5 +1,9 @@
 from django import forms
-from .models import Course, AcademicYear, Semester, YearOfStudy, System_User, Student, UnitOffering, Lecturer, Response
+from .views import (
+                    Course, AcademicYear, Semester, YearOfStudy, System_User, Student, UnitOffering, Lecturer, 
+                    Response
+    
+)
 
 
 class SignUpForm(forms.ModelForm):
@@ -120,4 +124,21 @@ class CodResponseForm(forms.ModelForm):
     class Meta:
         model = Response
         fields = ['cat_mark', 'exam_mark', 'comment_by_cod']
+
+class ResponseForm(forms.ModelForm):
+    class Meta:
+        model = Response
+        fields = ['cat_mark', 'exam_mark']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        complaint = kwargs.get('complaint')  # Get the complaint object
+        if complaint:
+            if complaint.missing_type == 'CAT':
+                self.fields['exam_mark'].widget = forms.HiddenInput()  # Hide EXAM field
+            elif complaint.missing_type == 'EXAM':
+                self.fields['cat_mark'].widget = forms.HiddenInput()  # Hide CAT field
+            elif complaint.missing_type == 'BOTH':
+                pass  # Both fields are shown by default
+
 

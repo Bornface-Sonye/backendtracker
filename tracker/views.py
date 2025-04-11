@@ -10,6 +10,7 @@ from django.utils import timezone
 from datetime import timedelta
 
 from django.db import transaction
+from django.http import JsonResponse
 from django.db import IntegrityError
 from django.contrib.auth.mixins import LoginRequiredMixin
 
@@ -30,7 +31,7 @@ System_User
 
 from .forms import (
 SignUpForm, LoginForm, StudentForm, MissingMarkForm, UploadFileForm, ResetForm, PasswordResetForm,
-AssignLecturerForm, CodResponseForm
+AssignLecturerForm, CodResponseForm, ResponseForm
 )
 
 
@@ -470,8 +471,9 @@ class CodComplaintsView(View):
         try:
             cod = Lecturer.objects.get(username=username, role='COD')
             department = cod.department
-            complaints = Complaint.objects.filter(unit_offering__unit__department=department)\
+            complaints = Complaint.objects.filter(unit_offering__unit__department=department, resolved=False)\
                                           .select_related('student', 'unit_offering__unit')
+
         except Lecturer.DoesNotExist:
             return redirect('login')
 
@@ -532,10 +534,67 @@ class CodRespondView(View):
             response.save()
             return redirect('cod-complaints')
 
-        return render(request, 'cod_response.html', {'form': form, 'complaint': complaint})
+        return render(request, 'cod_response.html', {'form': form, 'complaint': complaint})    
 
-    
-    
+class LecturerComplaintsListView(ListView):
+    model = Complaint
+    template_name = 'lecturer_complaints.html'
+    context_object_name = 'complaints'
+
+    def get_queryset(self):
+        """Return only unresolved complaints assigned to the logged-in lecturer."""
+        username = self.request.session.get('username')
+        if not username:
+            return redirect('login')
+        
+        lecturer = Lecturer.objects.filter(username=username).first()
+        if lecturer:
+            return Complaint.objects.filter(assigned_lecturer=lecturer, resolved=False)
+        return Complaint.objects.none()
+
+class LecturerRespondView(FormView):
+    template_name = 'lecturer_respond.html'
+    form_class = ResponseForm
+
+    def dispatch(self, request, *args, **kwargs):
+        # Get complaint based on complaint_code from URL kwargs
+        self.complaint = get_object_or_404(Complaint, complaint_code=kwargs['complaint_code'])
+        # Ensure the complaint is not already resolved
+        if self.complaint.resolved:
+            messages.error(request, "This complaint has already been resolved.")
+            return redirect('lecturer-complaints')
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_initial(self):
+        """Prepare initial form data based on the missing type of the complaint."""
+        initial = super().get_initial()
+        if self.complaint.missing_type == 'CAT':
+            initial['exam_mark'] = None
+        elif self.complaint.missing_type == 'EXAM':
+            initial['cat_mark'] = None
+        return initial
+
+    def form_valid(self, form):
+        """Save the response, mark complaint as resolved, and redirect."""
+        response = form.save(commit=False)
+        response.complaint = self.complaint
+        response.save()
+
+        # Mark the complaint as resolved
+        self.complaint.resolved = True
+        self.complaint.save()
+
+        # Success message and redirect
+        messages.success(self.request, "Response submitted successfully and complaint marked as resolved.")
+        return redirect('lecturer_complaints')
+
+    def form_invalid(self, form):
+        """Handle invalid form submission."""
+        messages.error(self.request, "There was an error submitting the response.")
+        return self.render_to_response(self.get_context_data(form=form))
+
+
+ 
 class LoadNominalRollView(View):
     def get(self, request):
         form = UploadFileForm()

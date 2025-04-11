@@ -1,0 +1,38 @@
+{% extends 'base_dashboard.html' %}
+{% block content %}
+<h3 style="font-family: Arial, sans-serif; color: #2c3e50;">Respond to Complaint: {{ complaint.complaint_code }}</h3>
+
+<!-- Display Complaint Details -->
+<div class="mb-3" style="font-family: Arial, sans-serif; color: #34495e;">
+    <strong style="color: #1abc9c;">Student Registration No:</strong> <span style="color: #2980b9;">{{ complaint.student.reg_no }}</span> <br>
+    <strong style="color: #1abc9c;">Unit Code:</strong> <span style="color: #2980b9;">{{ complaint.unit_offering.unit.unit_code }}</span> <br>
+    <strong style="color: #1abc9c;">Academic Year:</strong> <span style="color: #2980b9;">{{ complaint.unit_offering.academic_year }}</span> <br>
+</div>
+
+<!-- Response Form -->
+<form method="post" style="font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; background-color: #ecf0f1; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+    {% csrf_token %}
+    
+    <div class="form-group" style="margin-bottom: 20px;">
+        <label for="cat_mark" style="font-size: 16px; color: #2c3e50;">Enter CAT Mark:</label>
+        <input type="number" id="cat_mark" name="cat_mark" class="form-control" style="padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 5px; width: 100%; background-color: #fff;" required>
+    </div>
+
+    <div class="form-group" style="margin-bottom: 20px;">
+        <label for="exam_mark" style="font-size: 16px; color: #2c3e50;">Enter Exam Mark:</label>
+        <input type="number" id="exam_mark" name="exam_mark" class="form-control" style="padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 5px; width: 100%; background-color: #fff;" required>
+    </div>
+
+    <button type="submit" class="btn btn-primary" style="background-color: #3498db; color: white; padding: 10px 20px; border: none; font-size: 18px; border-radius: 5px; cursor: pointer;">
+        Submit Response
+    </button>
+</form>
+
+{% if messages %}
+    <div class="alert alert-success" style="font-family: Arial, sans-serif; background-color: #2ecc71; color: white; padding: 10px; border-radius: 5px; margin-top: 20px;">
+        {% for message in messages %}
+            <p>{{ message }}</p>
+        {% endfor %}
+    </div>
+{% endif %}
+{% endblock %}

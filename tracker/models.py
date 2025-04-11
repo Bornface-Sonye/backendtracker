@@ -225,7 +225,7 @@ class Complaint(models.Model):
         Lecturer, null=True, blank=True, 
         on_delete=models.SET_NULL, related_name='assigned_complaints'
     )
-    forwarded_to_exam_officer = models.BooleanField(default=False)
+    resolved = models.BooleanField(default=False)
     
     def __str__(self):
         return f"{self.complaint_code} - {self.student} - {self.missing_type}"
