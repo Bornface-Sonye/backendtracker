@@ -1,23 +1,33 @@
 from django.db import models
+from datetime import date
+from django.utils import timezone
+import random
+import string
+from datetime import timedelta
+from django.core.exceptions import ValidationError
+from django.contrib.auth.hashers import make_password, check_password
+from .validators import validate_reg_no, validate_kenyan_phone_number
+from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.exceptions import ValidationError
 
 class School(models.Model):
-    school_code = models.CharField(max_length=10, primary_key=True)
-    school_name = models.CharField(max_length=255)
+    school_code = models.CharField(primary_key=True, unique=True, max_length=20, help_text="Please Enter School Code")
+    school_name = models.CharField(max_length=200, help_text="Please Enter School Name")
     
     def __str__(self):
         return f"{self.school_code}"
 
 class Department(models.Model):
-    department_code = models.CharField(max_length=10, primary_key=True)
-    department_name = models.CharField(max_length=255)
+    department_code = models.CharField(primary_key=True, unique=True, max_length=20, help_text="Please Enter Department Code")
+    department_name = models.CharField(max_length=200, help_text="Please Enter Department Name")
     school = models.ForeignKey(School, on_delete=models.CASCADE)
     
     def __str__(self):
         return f"{self.department_code}"
 
 class Program(models.Model):
-    program_code = models.CharField(max_length=10, primary_key=True)
-    program_name = models.CharField(max_length=255)
+    program_code = models.CharField(max_length=10, primary_key=True, help_text="Please Enter Program Code")
+    program_name = models.CharField(max_length=255, help_text="Please Enter Program Name")
     level = models.CharField(max_length=50, choices=[
         ('Certificate', 'Certificate'), 
         ('Diploma', 'Diploma'), 
@@ -31,15 +41,16 @@ class Program(models.Model):
         return f"{self.program_code}"
 
 class Course(models.Model):
-    course_code = models.CharField(max_length=10, primary_key=True)
-    course_name = models.CharField(max_length=255)
+    course_code = models.CharField(primary_key=True, unique=True, max_length=20, help_text="Please Enter Course Code")
+    course_name = models.CharField(max_length=200, help_text="Please Enter Course Name")
     program = models.ForeignKey(Program, on_delete=models.CASCADE)
     
     def __str__(self):
         return f"{self.course_code}"
 
 class AcademicYear(models.Model):
-    academic_year = models.CharField(max_length=20, primary_key=True)  # e.g. "2023/2024"
+    year_id = models.AutoField(primary_key=True)
+    academic_year = models.CharField(max_length=200, help_text="Please Enter Academic Year")  # e.g. "2023/2024"
     
     def __str__(self):
         return f"{self.academic_year}"
@@ -61,20 +72,24 @@ class YearOfStudy(models.Model):
     
     def __str__(self):
         return f"{self.study_year}"
-
+    
 class Unit(models.Model):
-    unit_code = models.CharField(max_length=20, primary_key=True)
-    unit_name = models.CharField(max_length=255)
+    unit_code = models.CharField(primary_key=True, unique=True, max_length=20, help_text="Please Enter Unit Code")
+    unit_name = models.CharField(max_length=200, help_text="Please Enter Unit Name")
     department = models.ForeignKey(Department, on_delete=models.CASCADE)
-    courses = models.ManyToManyField(Course)
+    course = models.ForeignKey(Course, on_delete=models.CASCADE)
     
     def __str__(self):
         return f"{self.unit_code}"
 
 class Lecturer(models.Model):
-    employee_no = models.CharField(max_length=20, primary_key=True)
-    phone_number = models.CharField(max_length=20)
-    departments = models.ManyToManyField(Department)
+    employee_no = models.CharField(max_length=20, primary_key=True, help_text="Please Enter Lecturer Number")
+    email_address = models.EmailField(max_length=200, help_text="Please Enter Lecturer Email Address")
+    username = models.EmailField(unique=True, max_length=200, help_text="Enter a valid Username")
+    first_name = models.CharField(max_length=200, help_text="Please Enter Student First Name")
+    last_name = models.CharField(max_length=200, help_text="Please Enter Student Last Name")
+    phone_number = models.CharField(max_length=13, validators=[validate_kenyan_phone_number], help_text="Enter phone number in the format 0798073204 or +254798073404")
+    departments = models.ForeignKey(Department, on_delete=models.CASCADE)
     role = models.CharField(max_length=50, choices=[
         ('Member', 'Member'),
         ('Exam Officer', 'Exam Officer'),
@@ -85,7 +100,12 @@ class Lecturer(models.Model):
         return f"{self.employee_no}"
 
 class Student(models.Model):
-    registration_no = models.CharField(max_length=50, primary_key=True)
+    registration_no = models.CharField(primary_key=True, unique=True, max_length=200, validators=[validate_reg_no], help_text="Please Enter Student Registration Number")
+    username = models.CharField(unique=True, max_length=200, help_text="Enter a valid Username")
+    first_name = models.CharField(max_length=200, help_text="Please Enter Student First Name")
+    last_name = models.CharField(max_length=200, help_text="Please Enter Student Last Name")
+    email_address = models.EmailField(max_length=200, help_text="Please Enter Student Email Address")
+    phone_number = models.CharField(max_length=13, validators=[validate_kenyan_phone_number], help_text="Enter phone number in the format 0798073204 or +254798073404")
     program = models.ForeignKey(Program, on_delete=models.CASCADE)
     course = models.ForeignKey(Course, on_delete=models.CASCADE)
     
@@ -146,3 +166,33 @@ class ArchivedComplaint(models.Model):
     
     def __str__(self):
         return f"{self.complaint} - {self.resolved_by} - {self.deleted_at}"
+
+class System_User(models.Model):
+    username = models.CharField(primary_key=True, unique=True, max_length=50, help_text="Enter a valid Username")
+    password_hash = models.CharField(max_length=128, help_text="Enter a valid password")  # Store hashed password
+
+    def set_password(self, raw_password):
+        self.password_hash = make_password(raw_password)
+
+    def check_password(self, raw_password):
+        return check_password(raw_password, self.password_hash)
+
+    def clean(self):
+        # Custom validation for password field
+        if len(self.password_hash) < 8:
+            raise ValidationError("Password must be at least 8 characters long.")
+
+    def __str__(self):
+        return self.username   
+
+class PasswordResetToken(models.Model):
+    username = models.ForeignKey(System_User, on_delete=models.CASCADE)
+    token = models.CharField(max_length=32)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Token for {self.username}"
+
+    def is_expired(self):
+        expiration_time = self.created_at + timedelta(minutes=5)
+        return timezone.now() > expiration_time
