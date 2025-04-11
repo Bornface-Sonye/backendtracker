@@ -12,7 +12,6 @@ from datetime import timedelta
 from django.db import transaction
 from django.db import IntegrityError
 
-
 from .models import (
 Student, UnitOffering, Complaint, Course, YearOfStudy, AcademicYear, Semester, Lecturer, LecturerUnit,
 PasswordResetToken, Complaint, NominalRoll, Result, Response, Unit,
@@ -20,7 +19,7 @@ System_User
 )
 
 from .forms import (
-SignUpForm, LoginForm, StudentForm, MissingMarkForm, UploadFileForm
+SignUpForm, LoginForm, StudentForm, MissingMarkForm, UploadFileForm, ResetForm, PasswordResetForm
 )
 
 from django.contrib import messages
@@ -222,6 +221,83 @@ class LogoutView(View):
     def get(self, request, *args, **kwargs):
         logout(request)  # Use logout directly
         return redirect('login')  # Redirect to the login page or another appropriate page
+    
+class ResetPasswordView(View):
+    template_name = 'reset_password.html'
+    form_class = PasswordResetForm
+
+    def get(self, request):
+        form = self.form_class()
+        return render(request, self.template_name, {'form': form})
+
+    def post(self, request):
+        form = self.form_class(request.POST)
+        if form.is_valid():
+            username = form.cleaned_data['username']  # This is the email address
+            user = System_User.objects.filter(username=username).first()
+            if user:
+                try:
+                    # Generate a unique token
+                    token = get_random_string(length=32)
+                    # Save the token to the database
+                    PasswordResetToken.objects.create(username=user, token=token)
+                    # Generate the reset link
+                    reset_link = request.build_absolute_uri(f'/reset-password/{token}/')
+                    # Send password reset email
+                    send_mail(
+                        'Reset Your Password',
+                        f'Click the link to reset your password: {reset_link}',
+                        settings.EMAIL_HOST_USER,
+                        [user.username],  # Use the username as the email address
+                        fail_silently=False,
+                    )
+                    success_message = f"A password reset link has been sent to {user.username}."
+                    return render(request, self.template_name, {'form': form, 'success_message': success_message})
+                except Exception as e:
+                    error_message = f"An error occurred: {str(e)} or Email Address does not exist in our records"
+                    return render(request, self.template_name, {'form': form, 'error_message': error_message})
+            else:
+                error_message = "Email Address does not exist in our records."
+                return render(request, self.template_name, {'form': form, 'error_message': error_message})
+
+        return render(request, self.template_name, {'form': form})
+
+
+class ResetPasswordConfirmView(View):
+    template_name = 'reset_password_confirm.html'
+
+    def get(self, request, token):
+        form = ResetForm()
+        password_reset_token = PasswordResetToken.objects.filter(token=token).first()
+
+        if not password_reset_token or password_reset_token.is_expired():
+            error_message = "Token is invalid or expired."
+            return render(request, self.template_name, {'form': form, 'token': token, 'error_message': error_message})
+
+        return render(request, self.template_name, {'form': form, 'token': token})
+
+    def post(self, request, token):
+        form = ResetForm(request.POST)
+        password_reset_token = PasswordResetToken.objects.filter(token=token).first()
+
+        if not password_reset_token or password_reset_token.is_expired():
+            error_message = "Token is invalid or expired."
+            return render(request, self.template_name, {'form': form, 'token': token, 'error_message': error_message})
+
+        if form.is_valid():
+            # Get user related to the token
+            user = get_object_or_404(System_User, username=password_reset_token.username)
+            form.save(user)  # Save the password to the user
+
+            # Delete the token for security
+            password_reset_token.delete()
+
+            # Success message
+            messages.success(request, "Your password has been reset successfully.")
+            return render(request, self.template_name, {'form': form, 'token': token})
+
+        # If form is not valid, show errors
+        return render(request, self.template_name, {'form': form, 'token': token, 'error_message': "Invalid form submission."})
 
 class Lecturer_DashboardView(View):
     def get(self, request):
