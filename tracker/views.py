@@ -12,6 +12,13 @@ from datetime import timedelta
 from django.db import transaction
 from django.db import IntegrityError
 
+from django.views.generic import ListView, FormView
+from django.shortcuts import get_object_or_404, redirect
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.urls import reverse_lazy
+from .models import Complaint, COD, Lecturer, Response
+from .forms import AssignLecturerForm, CodResponseForm
+
 from .models import (
 Student, UnitOffering, Complaint, Course, YearOfStudy, AcademicYear, Semester, Lecturer, LecturerUnit,
 PasswordResetToken, Complaint, NominalRoll, Result, Response, Unit,
@@ -143,45 +150,33 @@ class SignUpView(View):
 
     def post(self, request):
         form = SignUpForm(request.POST)
-
         if form.is_valid():
             username = form.cleaned_data['username']
             password_hash = form.cleaned_data['password_hash']
 
-            # Check if username already exists in System_User model
             if System_User.objects.filter(username=username).exists():
                 form.add_error('username', "This username has already been used in the system!")
                 return render(request, self.template_name, {'form': form})
-            if self.is_lecturer_username(username):
-                # Check if the lecturer exists in the Lecturer model
-                if not Lecturer.objects.filter(username=username).exists():
-                    form.add_error('username', "This lecturer email does not exist.")
-                    return render(request, self.template_name, {'form': form})
-            else:
-                form.add_error('username', "Invalid Username format. Please enter a valid Lecturer Username.")
+
+            if not self.is_lecturer_username(username) or not Lecturer.objects.filter(username=username).exists():
+                form.add_error('username', "Invalid or non-existent lecturer email.")
                 return render(request, self.template_name, {'form': form})
 
-            # Create the account if all checks pass
             new_account = form.save(commit=False)
             new_account.set_password(password_hash)
             new_account.save()
             return redirect('login')
-        else:
-            # If the form is not valid, render the template with the form and errors
-            return render(request, self.template_name, {'form': form})
+
+        return render(request, self.template_name, {'form': form})
 
     def is_lecturer_username(self, username):
-        # Check if the username is in the lecturer email format
         return bool(re.match(r'^[a-zA-Z0-9]{1,15}@mmust\.ac\.ke$', username))
-
-
 
 class LoginView(View):
     template_name = 'login.html'
 
     def get(self, request):
-        form = LoginForm()
-        return render(request, self.template_name, {'form': form})
+        return render(request, self.template_name, {'form': LoginForm()})
 
     def post(self, request):
         form = LoginForm(request.POST)
@@ -190,31 +185,26 @@ class LoginView(View):
             password = form.cleaned_data['password']
 
             if self.is_lecturer_username(username):
-                # Check if the username exists in the System_User model
                 user = System_User.objects.filter(username=username).first()
                 if user and user.check_password(password):
-                    # Check if the user exists in the Lecturer model
                     lecturer = Lecturer.objects.filter(username=username).first()
-                    if lecturer is not None:
-                        role = lecturer.role
-                        request.session['username'] = user.username  # Store username in session
-                        if role == "Member":
-                            return redirect(reverse('lecturer-dashboard'))
-                        elif role == "Exam Officer":
-                            return redirect(reverse('exam-dashboard'))
-                        elif role == "COD":
-                            return redirect(reverse('cod-dashboard'))
-                    else:
-                        # Username does not exist in Lecturer model
-                        form.add_error('username', "Wrong Username or Password.")
-                else:
-                    # Authentication failed for lecturer
-                    form.add_error('username', "Wrong Username or Password.")
+                    if lecturer:
+                        request.session['username'] = user.username
+                        request.session['role'] = lecturer.role
+                        request.session['employee_no'] = lecturer.employee_no
+                        request.session['dep_code'] = str(lecturer.dep_code.dep_code)
 
+                        if lecturer.role == "Member":
+                            return redirect('lecturer-dashboard')
+                        elif lecturer.role == "Exam Officer":
+                            return redirect('exam-dashboard')
+                        elif lecturer.role == "COD":
+                            return redirect('cod-dashboard')
+
+            form.add_error('username', "Wrong Username or Password.")
         return render(request, self.template_name, {'form': form})
 
     def is_lecturer_username(self, username):
-        # Check if the username is in the lecturer email format
         return bool(re.match(r'^[a-zA-Z0-9]{1,15}@mmust\.ac\.ke$', username))
 
 class LogoutView(View):
@@ -313,41 +303,41 @@ class Lecturer_DashboardView(View):
         if not lecturer:
             return redirect('login')  # Redirect if no matching lecturer found
 
-        department_name = lecturer.dep_code.dep_name
+        department_name = lecturer.department_code.department_name
 
         # Total students taking courses related to the lecturer's department
         total_students = Student.objects.filter(
-            course_code__dep_code=lecturer.dep_code
+            course_code__department_code=lecturer.department_code
         ).count()
 
         # Total lecturers within the same department
         total_lecturers_in_department = Lecturer.objects.filter(
-            dep_code=lecturer.dep_code
+            department_code=lecturer.department_code
         ).count()
 
         # Total units related to the lecturer from LecturerUnit model
         total_units_for_lecturer = LecturerUnit.objects.filter(
-            lec_no=lecturer.lec_no
+            employee_no=lecturer.employee
         ).count()
 
         # Filter complaints related to lecturer's unit codes, academic year, and course codes
         lecturer_unit_codes = LecturerUnit.objects.filter(
-            lec_no=lecturer.lec_no
+            employee=lecturer.employee_no
         ).values_list('unit_code', flat=True)
 
         related_complaints_count = Complaint.objects.filter(
             unit_code__in=lecturer_unit_codes,
-            academic_year__in=LecturerUnit.objects.filter(lec_no=lecturer).values_list('academic_year', flat=True),
-            reg_no__course_code__in=LecturerUnit.objects.filter(lec_no=lecturer).values_list('course_code', flat=True)
+            academic_year__in=LecturerUnit.objects.filter(employee_no=lecturer).values_list('academic_year', flat=True),
+            reg_no__course_code__in=LecturerUnit.objects.filter(employee_no=lecturer).values_list('course_code', flat=True)
         ).count()
 
 
         # Get all LecturerUnit instances for the lecturer
-        units = LecturerUnit.objects.filter(lec_no=lecturer.lec_no)
+        units = LecturerUnit.objects.filter(employee_no=lecturer.employee_no)
 
 
         # Fetch all courses in the lecturer's department
-        courses = Course.objects.filter(dep_code=lecturer.dep_code)
+        courses = Course.objects.filter(department_code=lecturer.department_code)
 
         # Pass calculated counts, units, and courses to the template
         context = {
@@ -378,39 +368,39 @@ class Exam_DashboardView(View):
         if not lecturer:
             return redirect('login')  # Redirect if no matching lecturer found
 
-        department_name = lecturer.dep_code.dep_name
+        department_name = lecturer.department_code.department_name
 
         # Total students taking courses related to the lecturer's department
         total_students = Student.objects.filter(
-            course_code__dep_code=lecturer.dep_code
+            course_code__dep_code=lecturer.department_code
         ).count()
 
         # Total lecturers within the same department
         total_lecturers_in_department = Lecturer.objects.filter(
-            dep_code=lecturer.dep_code
+            department_code=lecturer.dep_code
         ).count()
 
         # Total units related to the lecturer from LecturerUnit model
         total_units_for_lecturer = LecturerUnit.objects.filter(
-            lec_no=lecturer.lec_no
+            employee_no=lecturer.employee_no
         ).count()
 
         # Filter complaints related to lecturer's unit codes, academic year, and course codes
         lecturer_unit_codes = LecturerUnit.objects.filter(
-            lec_no=lecturer.lec_no
+            employee_no=lecturer.employee_no
         ).values_list('unit_code', flat=True)
 
         related_complaints_count = Complaint.objects.filter(
             unit_code__in=lecturer_unit_codes,
-            academic_year__in=LecturerUnit.objects.filter(lec_no=lecturer).values_list('academic_year', flat=True),
-            reg_no__course_code__in=LecturerUnit.objects.filter(lec_no=lecturer).values_list('course_code', flat=True)
+            academic_year__in=LecturerUnit.objects.filter(employee_no=lecturer).values_list('academic_year', flat=True),
+            reg_no__course_code__in=LecturerUnit.objects.filter(employee_no=lecturer).values_list('course_code', flat=True)
         ).count()
 
         # Get all LecturerUnit instances for the lecturer
-        units = LecturerUnit.objects.filter(lec_no=lecturer.lec_no)
+        units = LecturerUnit.objects.filter(employee_no=lecturer.employee_no)
 
         # Fetch all courses in the lecturer's department
-        courses = Course.objects.filter(dep_code=lecturer.dep_code)
+        courses = Course.objects.filter(department_code=lecturer.department_code)
 
         # Pass calculated counts, units, and courses to the template
         context = {
@@ -429,66 +419,98 @@ class Exam_DashboardView(View):
 
 class COD_DashboardView(View):
     def get(self, request):
-        # Retrieve username from session
         username = request.session.get('username')
         if not username:
-            return redirect('login')  # Redirect to login if username is missing
+            return redirect('login')
 
-        # Get logged-in lecturer details
         lecturer = Lecturer.objects.filter(username=username).first()
-        last_name = lecturer.last_name  # Add last name to context
-        user = System_User.objects.get(username=username)
         if not lecturer:
-            return redirect('login')  # Redirect if no matching lecturer found
+            return redirect('login')
 
-        department_name = lecturer.dep_code.dep_name
+        user = System_User.objects.get(username=username)
+        department = lecturer.department
+        department_name = department.department_name
 
-        # Total students taking courses related to the lecturer's department
-        total_students = Student.objects.filter(
-            course_code__dep_code=lecturer.dep_code
-        ).count()
+        # Set department and employee_no in session if not already set
+        request.session.setdefault('department_code', str(department.department_code))
+        request.session.setdefault('employee_no', lecturer.employee_no)
 
-        # Total lecturers within the same department
-        total_lecturers_in_department = Lecturer.objects.filter(
-            dep_code=lecturer.dep_code
-        ).count()
+        total_students = Student.objects.filter(course_code__department_code=department).count()
+        total_lecturers_in_department = Lecturer.objects.filter(dep_code=department).count()
 
-        # Total units related to the lecturer from LecturerUnit model
-        total_units_for_lecturer = LecturerUnit.objects.filter(
-            lec_no=lecturer.lec_no
-        ).count()
+        lecturer_units = LecturerUnit.objects.filter(employee_no=lecturer.employee_no)
+        total_units_for_lecturer = lecturer_units.count()
 
-        # Filter complaints related to lecturer's unit codes, academic year, and course codes
-        lecturer_unit_codes = LecturerUnit.objects.filter(
-            lec_no=lecturer.lec_no
-        ).values_list('unit_code', flat=True)
+        unit_codes = lecturer_units.values_list('unit_code', flat=True)
+        academic_years = lecturer_units.values_list('academic_year', flat=True)
+        course_codes = lecturer_units.values_list('course_code', flat=True)
 
         related_complaints_count = Complaint.objects.filter(
-            unit_code__in=lecturer_unit_codes,
-            academic_year__in=LecturerUnit.objects.filter(lec_no=lecturer).values_list('academic_year', flat=True),
-            reg_no__course_code__in=LecturerUnit.objects.filter(lec_no=lecturer).values_list('course_code', flat=True)
+            unit_code__in=unit_codes,
+            academic_year__in=academic_years,
+            reg_no__course_code__in=course_codes
         ).count()
 
-        # Get all LecturerUnit instances for the lecturer
-        units = LecturerUnit.objects.filter(lec_no=lecturer.lec_no)
+        courses = Course.objects.filter(dep_code=department)
 
-        # Fetch all courses in the lecturer's department
-        courses = Course.objects.filter(dep_code=lecturer.dep_code)
-
-        # Pass calculated counts, units, and courses to the template
         context = {
             'total_students': total_students,
             'total_lecturers_in_department': total_lecturers_in_department,
             'total_units_for_lecturer': total_units_for_lecturer,
             'related_complaints_count': related_complaints_count,
-            'last_name': last_name,
+            'last_name': lecturer.last_name,
             'user': user,
-            'units': units,
+            'units': lecturer_units,
             'courses': courses,
             'department_name': department_name,
         }
 
         return render(request, 'cod_dashboard.html', context)
+
+class CodComplaintsView(LoginRequiredMixin, ListView):
+    model = Complaint
+    template_name = 'cod_complaints.html'
+    context_object_name = 'complaints'
+
+    def get_queryset(self):
+        cod = get_object_or_404(COD, user=self.request.user)
+        return Complaint.objects.filter(unit_offering__department=cod.department)
+
+
+class AssignLecturerView(LoginRequiredMixin, FormView):
+    template_name = 'assign_lecturer.html'
+    form_class = AssignLecturerForm
+
+    def dispatch(self, request, *args, **kwargs):
+        self.complaint = get_object_or_404(Complaint, complaint_code=self.kwargs['complaint_code'])
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        cod = get_object_or_404(COD, user=self.request.user)
+        kwargs['department'] = cod.department
+        return kwargs
+
+    def form_valid(self, form):
+        lecturer = form.cleaned_data['lecturer']
+        self.complaint.assigned_lecturer = lecturer
+        self.complaint.save()
+        return redirect('cod-complaints')
+
+
+class CodRespondView(LoginRequiredMixin, FormView):
+    template_name = 'cod_response.html'
+    form_class = CodResponseForm
+
+    def dispatch(self, request, *args, **kwargs):
+        self.complaint = get_object_or_404(Complaint, complaint_code=self.kwargs['complaint_code'])
+        return super().dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        response = form.save(commit=False)
+        response.complaint = self.complaint
+        response.save()
+        return redirect('cod-complaints')
     
     
 class LoadNominalRollView(View):

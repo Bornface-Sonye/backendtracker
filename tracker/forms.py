@@ -1,5 +1,5 @@
 from django import forms
-from .models import Course, AcademicYear, Semester, YearOfStudy, System_User, Student, UnitOffering
+from .models import Course, AcademicYear, Semester, YearOfStudy, System_User, Student, UnitOffering, Lecturer, Response
 
 
 class SignUpForm(forms.ModelForm):
@@ -106,3 +106,18 @@ class MissingMarkForm(forms.Form):
         widget=forms.CheckboxSelectMultiple,
         label='Select Missing Marks'
     )
+
+class AssignLecturerForm(forms.Form):
+    lecturer = forms.ModelChoiceField(queryset=Lecturer.objects.none())
+
+    def __init__(self, *args, **kwargs):
+        department = kwargs.pop('department', None)
+        super().__init__(*args, **kwargs)
+        if department:
+            self.fields['lecturer'].queryset = Lecturer.objects.filter(department=department)
+
+class CodResponseForm(forms.ModelForm):
+    class Meta:
+        model = Response
+        fields = ['cat_mark', 'exam_mark', 'comment_by_cod']
+

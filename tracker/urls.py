@@ -4,7 +4,7 @@ from .views import (
     SignUpView, LoginView, COD_DashboardView, Exam_DashboardView, Lecturer_DashboardView, LogoutView, StudentSelectView, 
     MissingMarkSelectView, COD_NominalRollListView, COD_ResultListView, COD_LoadResultView, COD_LoadNominalRollView,
     Exam_NominalRollListView, Exam_ResultListView, Exam_LoadResultView, Exam_LoadNominalRollView, NominalRollListView,
-    ResultListView, LoadResultView, LoadNominalRollView
+    ResultListView, LoadResultView, LoadNominalRollView, CodComplaintsView, AssignLecturerView, CodRespondView
     
     
 )
@@ -38,5 +38,8 @@ urlpatterns = [
 
     path('nominal-roll/', NominalRollListView.as_view(), name='nominal-roll'),
     path('result/', ResultListView.as_view(), name='result'),
-
+    
+    path('cod/complaints/', CodComplaintsView.as_view(), name='cod-complaints'),
+    path('cod/complaints/<str:complaint_code>/assign/', AssignLecturerView.as_view(), name='assign-lecturer'),
+    path('cod/complaints/<str:complaint_code>/respond/', CodRespondView.as_view(), name='cod-respond'),
 ]

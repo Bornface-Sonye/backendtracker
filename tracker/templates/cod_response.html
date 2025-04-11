@@ -1,0 +1,9 @@
+{% extends 'cod_base_dashboard.html' %}
+{% block content %}
+<h3>Respond to Complaint {{ complaint.complaint_code }}</h3>
+<form method="post" style="max-width: 600px; margin: auto;">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" style="padding: 8px 16px; background: #28a745; color: #fff; border: none;">Submit Response</button>
+</form>
+{% endblock %}

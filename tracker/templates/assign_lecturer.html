@@ -1,0 +1,9 @@
+{% extends 'cod_base_dashboard.html' %}
+{% block content %}
+<h3>Assign Lecturer to Complaint {{ complaint.complaint_code }}</h3>
+<form method="post" style="max-width: 600px; margin: auto;">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" style="padding: 8px 16px; background: #007bff; color: #fff; border: none;">Assign</button>
+</form>
+{% endblock %}
