@@ -31,7 +31,7 @@ System_User
 
 from .forms import (
 SignUpForm, LoginForm, StudentForm, MissingMarkForm, UploadFileForm, ResetForm, PasswordResetForm,
-AssignLecturerForm, CodResponseForm, ResponseForm
+AssignLecturerForm, CodResponseForm, ResponseForm, CODCommentForm
 )
 
 
@@ -593,6 +593,74 @@ class LecturerRespondView(FormView):
         messages.error(self.request, "There was an error submitting the response.")
         return self.render_to_response(self.get_context_data(form=form))
 
+class CODResponseListView(View):
+    template_name = 'cod_responses_list.html'
+
+    def get(self, request):
+        # Ensure the user is logged in and is a COD
+        username = request.session.get('username')
+        if not username:
+            return redirect('login')
+
+        lecturer = Lecturer.objects.filter(username=username).first()
+        if lecturer and lecturer.role == 'COD':
+            # Get responses that are not approved by the COD
+            responses = Response.objects.filter(complaint__unit_offering__unit__department=lecturer.department, approved_by_cod=False)
+            return render(request, self.template_name, {'responses': responses})
+        
+        messages.error(request, "You do not have permission to access this page.")
+        return redirect('login')
+
+
+class CODApproveResponseView(View):
+    form_class = CODCommentForm
+    template_name = 'cod_approve_response.html'
+
+    def get(self, request, complaint_code):
+        # Ensure the user is logged in and is a COD
+        username = request.session.get('username')
+        if not username:
+            return redirect('login')
+
+        lecturer = Lecturer.objects.filter(username=username).first()
+        if lecturer and lecturer.role == 'COD':
+            # Get the response related to the complaint code
+            response = Response.objects.filter(complaint__complaint_code=complaint_code).first()
+            if response and not response.approved_by_cod:
+                form = self.form_class()
+                return render(request, self.template_name, {'form': form, 'response': response})
+            messages.error(request, "This response has already been approved or does not exist.")
+            return redirect('cod-responses-list')
+
+        messages.error(request, "You do not have permission to access this page.")
+        return redirect('login')
+
+    def post(self, request, complaint_code):
+        # Ensure the user is logged in and is a COD
+        username = request.session.get('username')
+        if not username:
+            return redirect('login')
+
+        lecturer = Lecturer.objects.filter(username=username).first()
+        if lecturer and lecturer.role == 'COD':
+            # Get the response related to the complaint code
+            response = Response.objects.filter(complaint__complaint_code=complaint_code).first()
+            if response and not response.approved_by_cod:
+                form = self.form_class(request.POST)
+                if form.is_valid():
+                    # Add the COD comment and update the approval status
+                    response.comment_by_cod = form.cleaned_data['comment']
+                    response.approved_by_cod = True
+                    response.save()
+
+                    messages.success(request, "Response approved successfully.")
+                    return redirect('cod-responses-list')
+                else:
+                    messages.error(request, "There was an error with your submission.")
+                    return render(request, self.template_name, {'form': form, 'response': response})
+
+        messages.error(request, "You do not have permission to access this page.")
+        return redirect('login')
 
  
 class LoadNominalRollView(View):

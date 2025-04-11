@@ -5,11 +5,8 @@ from .views import (
     MissingMarkSelectView, COD_NominalRollListView, COD_ResultListView, COD_LoadResultView, COD_LoadNominalRollView,
     Exam_NominalRollListView, Exam_ResultListView, Exam_LoadResultView, Exam_LoadNominalRollView, NominalRollListView,
     ResultListView, LoadResultView, LoadNominalRollView, CodComplaintsView, AssignLecturerView, CodRespondView,
-    LecturerComplaintsListView, LecturerRespondView
-    
-    
+    LecturerComplaintsListView, LecturerRespondView, CODResponseListView, CODApproveResponseView    
 )
-
 
 urlpatterns = [
     path('student/', StudentSelectView.as_view(), name='student'),
@@ -47,4 +44,7 @@ urlpatterns = [
     
     path('lecturer/complaints/', LecturerComplaintsListView.as_view(), name='lecturer-complaints'),
     path('lecturer/complaint/<str:complaint_code>/respond/', LecturerRespondView.as_view(), name='lecturer-respond-to-complaint'),
+    
+    path('responses/', CODResponseListView.as_view(), name='cod_responses_list'),
+    path('approve-response/<str:complaint_code>/', CODApproveResponseView.as_view(), name='cod_approve_response'),
 ]

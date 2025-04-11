@@ -141,4 +141,6 @@ class ResponseForm(forms.ModelForm):
             elif complaint.missing_type == 'BOTH':
                 pass  # Both fields are shown by default
 
+class CODCommentForm(forms.Form):
+    comment = forms.CharField(widget=forms.Textarea(attrs={'rows': 5, 'placeholder': 'Enter your comment...'}), required=True)
 
