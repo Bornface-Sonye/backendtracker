@@ -1,0 +1,41 @@
+{% extends 'exam_base_dashboard.html' %}
+
+{% block content %}
+<h3>Assigned Complaints</h3>
+<!-- Complaint List -->
+<table class="table table-bordered table-striped">
+    <thead>
+        <tr>
+            <th>Complaint Code</th>
+            <th>Student</th>
+            <th>Unit</th>
+            <th>Missing Type</th>
+            <th>Submitted At</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for complaint in complaints %}
+        <tr>
+            <td>{{ complaint.complaint_code }}</td>
+            <td>{{ complaint.student }}</td>
+            <td>{{ complaint.unit_offering.unit.unit_name }}</td>
+            <td>{{ complaint.get_missing_type_display }}</td>
+            <td>{{ complaint.submitted_at }}</td>
+            <td>
+                <a href="{% url 'lecturer-respond-to-complaint' complaint.complaint_code %}" class="btn btn-success">Respond</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if messages %}
+    <div class="alert alert-success">
+        {% for message in messages %}
+            <p>{{ message }}</p>
+        {% endfor %}
+    </div>
+{% endif %}
+{% endblock %}
+
