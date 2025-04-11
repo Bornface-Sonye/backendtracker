@@ -93,7 +93,7 @@ class UploadFileForm(forms.Form):
 
 
 class StudentForm(forms.Form):
-    registration_no = forms.CharField(max_length=50, label='Registration Number')
+    reg_no = forms.CharField(max_length=50, label='Registration Number')
     course = forms.ModelChoiceField(queryset=Course.objects.all(), label='Course')
     year_of_study = forms.ModelChoiceField(queryset=YearOfStudy.objects.all(), label='Year of Study')
     academic_year = forms.ModelChoiceField(queryset=AcademicYear.objects.all(), label='Academic Year')

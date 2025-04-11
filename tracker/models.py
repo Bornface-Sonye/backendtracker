@@ -109,7 +109,7 @@ class LecturerUnit(models.Model):
         return f"{self.employee_no}"
 
 class Student(models.Model):
-    registration_no = models.CharField(primary_key=True, unique=True, max_length=200, validators=[validate_reg_no], help_text="Please Enter Student Registration Number")
+    reg_no = models.CharField(primary_key=True, unique=True, max_length=200, validators=[validate_reg_no], help_text="Please Enter Student Registration Number")
     username = models.CharField(unique=True, max_length=200, help_text="Enter a valid Username")
     first_name = models.CharField(max_length=200, help_text="Please Enter Student First Name")
     last_name = models.CharField(max_length=200, help_text="Please Enter Student Last Name")
@@ -119,7 +119,7 @@ class Student(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE)
     
     def __str__(self):
-        return f"{self.registration_no}"
+        return f"{self.reg_no}"
 
 class UnitOffering(models.Model):
     offering_id = models.AutoField(primary_key=True)
@@ -133,29 +133,7 @@ class UnitOffering(models.Model):
     def __str__(self):
         return f"{self.unit} - {self.course} - {self.academic_year}"
 
-class Complaint(models.Model):
-    complaint_code = models.CharField(
-        max_length=100,
-        primary_key=True,
-        unique=True,
-        help_text="Please Enter Complaint Code"
-    )
-    student = models.ForeignKey(Student, on_delete=models.CASCADE)
-    unit_offering = models.ForeignKey(UnitOffering, on_delete=models.CASCADE)
-    missing_type = models.CharField(max_length=10, choices=[
-        ('CAT', 'CAT'), 
-        ('EXAM', 'EXAM'), 
-        ('BOTH', 'Both')
-    ])
-    submitted_at = models.DateTimeField(auto_now_add=True)
-    assigned_lecturer = models.ForeignKey(
-        Lecturer, null=True, blank=True, 
-        on_delete=models.SET_NULL, related_name='assigned_complaints'
-    )
-    forwarded_to_exam_officer = models.BooleanField(default=False)
-    
-    def __str__(self):
-        return f"{self.complaint_code} - {self.student} - {self.missing_type}"
+
 
 class NominalRoll(models.Model):
     unit_code = models.ForeignKey(Unit, on_delete=models.CASCADE)
@@ -227,6 +205,30 @@ class Result(models.Model):
         # Call clean method to perform validations before saving
         self.clean()
         super().save(*args, **kwargs)
+        
+class Complaint(models.Model):
+    complaint_code = models.CharField(
+        max_length=100,
+        primary_key=True,
+        unique=True,
+        help_text="Please Enter Complaint Code"
+    )
+    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+    unit_offering = models.ForeignKey(UnitOffering, on_delete=models.CASCADE)
+    missing_type = models.CharField(max_length=10, choices=[
+        ('CAT', 'CAT'), 
+        ('EXAM', 'EXAM'), 
+        ('BOTH', 'Both')
+    ])
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    assigned_lecturer = models.ForeignKey(
+        Lecturer, null=True, blank=True, 
+        on_delete=models.SET_NULL, related_name='assigned_complaints'
+    )
+    forwarded_to_exam_officer = models.BooleanField(default=False)
+    
+    def __str__(self):
+        return f"{self.complaint_code} - {self.student} - {self.missing_type}"
         
     
 class Response(models.Model):

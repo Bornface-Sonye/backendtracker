@@ -42,16 +42,16 @@ class StudentSelectView(View):
     def post(self, request):
         form = StudentForm(request.POST)
         if form.is_valid():
-            reg_no = form.cleaned_data['registration_no']
+            reg_no = form.cleaned_data['reg_no']
             course_code = form.cleaned_data['course']
             year_of_study = form.cleaned_data['year_of_study']
             academic_year = form.cleaned_data['academic_year']
             semester = form.cleaned_data['semester']
 
             try:
-                student = Student.objects.get(registration_no=reg_no, course__course_code=course_code)
+                student = Student.objects.get(reg_no=reg_no, course__course_code=course_code)
             except Student.DoesNotExist:
-                form.add_error('registration_no', 'Student not found.')
+                form.add_error('reg_no', 'Student not found.')
                 return render(request, 'student_reg_no.html', {'form': form})
 
             course = Course.objects.get(course_code=course_code)
@@ -108,7 +108,7 @@ class MissingMarkSelectView(View):
         if form.is_valid():
             unit = form.cleaned_data['unit']
             missing_types = form.cleaned_data['missing_mark_type']
-            student = Student.objects.get(registration_no=student_data['reg_no'])
+            student = Student.objects.get(reg_no=student_data['reg_no'])
 
             # Check if complaint already exists
             if Complaint.objects.filter(student=student, unit_offering=unit).exists():
