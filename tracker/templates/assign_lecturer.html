@@ -1,9 +1,15 @@
 {% extends 'cod_base_dashboard.html' %}
+
 {% block content %}
-<h3>Assign Lecturer to Complaint {{ complaint.complaint_code }}</h3>
-<form method="post" style="max-width: 600px; margin: auto;">
+<h3 style="text-align: center; margin-bottom: 20px;">Assign Lecturer to Complaint {{ complaint.complaint_code }}</h3>
+
+<form method="post" style="max-width: 600px; margin: auto; background: #f9f9f9; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
     {% csrf_token %}
     {{ form.as_p }}
-    <button type="submit" style="padding: 8px 16px; background: #007bff; color: #fff; border: none;">Assign</button>
+    <div style="text-align: center; margin-top: 20px;">
+        <button type="submit" style="padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">
+            Assign
+        </button>
+    </div>
 </form>
 {% endblock %}

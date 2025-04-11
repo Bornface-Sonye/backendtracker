@@ -11,33 +11,27 @@ from datetime import timedelta
 
 from django.db import transaction
 from django.db import IntegrityError
-
-from django.views.generic import ListView, FormView
-from django.shortcuts import get_object_or_404, redirect
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.urls import reverse_lazy
-from .models import Complaint, COD, Lecturer, Response
-from .forms import AssignLecturerForm, CodResponseForm
-
-from .models import (
-Student, UnitOffering, Complaint, Course, YearOfStudy, AcademicYear, Semester, Lecturer, LecturerUnit,
-PasswordResetToken, Complaint, NominalRoll, Result, Response, Unit,
-System_User
-)
-
-from .forms import (
-SignUpForm, LoginForm, StudentForm, MissingMarkForm, UploadFileForm, ResetForm, PasswordResetForm
-)
-
-from django.contrib import messages
-from .utils import generate_unique_complaint_code  # import the utility
 
 import re
 from django.core.exceptions import ValidationError
 import pandas as pd
 import random
 import string
+
 from django.contrib import messages
+from .utils import generate_unique_complaint_code
+
+from .models import (
+Student, UnitOffering, Complaint, Course, YearOfStudy, AcademicYear, Semester, Lecturer, LecturerUnit,
+PasswordResetToken, Complaint, NominalRoll, Result, Response, Unit, Lecturer,
+System_User
+)
+
+from .forms import (
+SignUpForm, LoginForm, StudentForm, MissingMarkForm, UploadFileForm, ResetForm, PasswordResetForm,
+AssignLecturerForm, CodResponseForm
+)
 
 
 class StudentSelectView(View):
@@ -467,50 +461,79 @@ class COD_DashboardView(View):
 
         return render(request, 'cod_dashboard.html', context)
 
-class CodComplaintsView(LoginRequiredMixin, ListView):
-    model = Complaint
-    template_name = 'cod_complaints.html'
-    context_object_name = 'complaints'
+class CodComplaintsView(View):
+    def get(self, request):
+        username = request.session.get('username')
+        if not username:
+            return redirect('login')
 
-    def get_queryset(self):
-        cod = get_object_or_404(COD, user=self.request.user)
-        return Complaint.objects.filter(unit_offering__department=cod.department)
+        try:
+            cod = Lecturer.objects.get(username=username, role='COD')
+            department = cod.department
+            complaints = Complaint.objects.filter(unit_offering__unit__department=department)\
+                                          .select_related('student', 'unit_offering__unit')
+        except Lecturer.DoesNotExist:
+            return redirect('login')
 
+        context = {
+            'complaints': complaints
+        }
+        return render(request, 'cod_complaints.html', context)
 
-class AssignLecturerView(LoginRequiredMixin, FormView):
-    template_name = 'assign_lecturer.html'
-    form_class = AssignLecturerForm
+class AssignLecturerView(View):
+    def get(self, request, complaint_code):
+        username = request.session.get('username')
+        if not username:
+            return redirect('login')
 
-    def dispatch(self, request, *args, **kwargs):
-        self.complaint = get_object_or_404(Complaint, complaint_code=self.kwargs['complaint_code'])
-        return super().dispatch(request, *args, **kwargs)
+        complaint = get_object_or_404(Complaint, complaint_code=complaint_code)
+        cod = get_object_or_404(Lecturer, username=username, role='COD')
+        form = AssignLecturerForm(department=cod.department)
 
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        cod = get_object_or_404(COD, user=self.request.user)
-        kwargs['department'] = cod.department
-        return kwargs
+        return render(request, 'assign_lecturer.html', {'form': form, 'complaint': complaint})
 
-    def form_valid(self, form):
-        lecturer = form.cleaned_data['lecturer']
-        self.complaint.assigned_lecturer = lecturer
-        self.complaint.save()
-        return redirect('cod-complaints')
+    def post(self, request, complaint_code):
+        username = request.session.get('username')
+        if not username:
+            return redirect('login')
 
+        complaint = get_object_or_404(Complaint, complaint_code=complaint_code)
+        cod = get_object_or_404(Lecturer, username=username, role='COD')
+        form = AssignLecturerForm(request.POST, department=cod.department)
 
-class CodRespondView(LoginRequiredMixin, FormView):
-    template_name = 'cod_response.html'
-    form_class = CodResponseForm
+        if form.is_valid():
+            complaint.assigned_lecturer = form.cleaned_data['lecturer']
+            complaint.save()
+            return redirect('cod-complaints')
 
-    def dispatch(self, request, *args, **kwargs):
-        self.complaint = get_object_or_404(Complaint, complaint_code=self.kwargs['complaint_code'])
-        return super().dispatch(request, *args, **kwargs)
+        return render(request, 'assign_lecturer.html', {'form': form, 'complaint': complaint})
 
-    def form_valid(self, form):
-        response = form.save(commit=False)
-        response.complaint = self.complaint
-        response.save()
-        return redirect('cod-complaints')
+class CodRespondView(View):
+    def get(self, request, complaint_code):
+        username = request.session.get('username')
+        if not username:
+            return redirect('login')
+
+        complaint = get_object_or_404(Complaint, complaint_code=complaint_code)
+        form = CodResponseForm()
+        return render(request, 'cod_response.html', {'form': form, 'complaint': complaint})
+
+    def post(self, request, complaint_code):
+        username = request.session.get('username')
+        if not username:
+            return redirect('login')
+
+        complaint = get_object_or_404(Complaint, complaint_code=complaint_code)
+        form = CodResponseForm(request.POST)
+
+        if form.is_valid():
+            response = form.save(commit=False)
+            response.complaint = complaint
+            response.save()
+            return redirect('cod-complaints')
+
+        return render(request, 'cod_response.html', {'form': form, 'complaint': complaint})
+
     
     
 class LoadNominalRollView(View):

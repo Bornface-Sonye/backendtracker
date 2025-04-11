@@ -1,9 +1,11 @@
 {% extends 'cod_base_dashboard.html' %}
+
 {% block content %}
 <h2 style="text-align: center; margin-bottom: 20px;">Complaints Dashboard</h2>
-<table style="width: 100%; border-collapse: collapse; margin: auto;">
+
+<table style="width: 100%; border-collapse: collapse; margin: auto; font-family: Arial, sans-serif;">
     <thead>
-        <tr style="background-color: #333; color: #fff;">
+        <tr style="background-color: #333; color: #fff; text-align: left;">
             <th style="padding: 10px; border: 1px solid #ddd;">Complaint Code</th>
             <th style="padding: 10px; border: 1px solid #ddd;">Student</th>
             <th style="padding: 10px; border: 1px solid #ddd;">Unit</th>
@@ -14,16 +16,20 @@
     </thead>
     <tbody>
         {% for complaint in complaints %}
-        <tr style="background-color: {% cycle '#f9f9f9' '#fff' %};">
+        <tr style="background-color: {% cycle '#f9f9f9' '#fff' %}; transition: background-color 0.3s;">
             <td style="padding: 10px; border: 1px solid #ddd;">{{ complaint.complaint_code }}</td>
-            <td style="padding: 10px; border: 1px solid #ddd;">{{ complaint.student }}</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">{{ complaint.student.first_name }} {{ complaint.student.last_name }}</td>
             <td style="padding: 10px; border: 1px solid #ddd;">{{ complaint.unit_offering.unit.unit_name }}</td>
             <td style="padding: 10px; border: 1px solid #ddd;">{{ complaint.missing_type }}</td>
-            <td style="padding: 10px; border: 1px solid #ddd;">{{ complaint.submitted_at }}</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">{{ complaint.submitted_at|date:"Y-m-d H:i" }}</td>
             <td style="padding: 10px; border: 1px solid #ddd;">
-                <a href="{% url 'assign-lecturer' complaint.complaint_code %}" style="margin-right: 10px; color: #007bff;">Assign</a>
-                <a href="{% url 'cod-respond' complaint.complaint_code %}" style="color: #28a745;">Respond</a>
+                <a href="{% url 'assign-lecturer' complaint.complaint_code %}" style="margin-right: 10px; color: #007bff; text-decoration: none;">Assign</a>
+                <a href="{% url 'cod-respond' complaint.complaint_code %}" style="color: #28a745; text-decoration: none;">Respond</a>
             </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="6" style="padding: 10px; text-align: center; border: 1px solid #ddd;">No complaints found.</td>
         </tr>
         {% endfor %}
     </tbody>
