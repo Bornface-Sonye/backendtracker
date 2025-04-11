@@ -89,12 +89,21 @@ class Lecturer(models.Model):
     first_name = models.CharField(max_length=200, help_text="Please Enter Student First Name")
     last_name = models.CharField(max_length=200, help_text="Please Enter Student Last Name")
     phone_number = models.CharField(max_length=13, validators=[validate_kenyan_phone_number], help_text="Enter phone number in the format 0798073204 or +254798073404")
-    departments = models.ForeignKey(Department, on_delete=models.CASCADE)
+    department = models.ForeignKey(Department, on_delete=models.CASCADE)
     role = models.CharField(max_length=50, choices=[
         ('Member', 'Member'),
         ('Exam Officer', 'Exam Officer'),
         ('COD', 'COD')
     ])
+    
+    def __str__(self):
+        return f"{self.employee_no}"
+    
+class LecturerUnit(models.Model):
+    unit_code = models.ForeignKey(Unit, on_delete=models.CASCADE)
+    employee_no = models.ForeignKey(Lecturer, on_delete=models.CASCADE)
+    academic_year = models.ForeignKey(AcademicYear, on_delete=models.CASCADE)
+    course_code = models.ForeignKey(Course, on_delete=models.CASCADE)
     
     def __str__(self):
         return f"{self.employee_no}"
