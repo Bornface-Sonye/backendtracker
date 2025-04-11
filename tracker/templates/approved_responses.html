@@ -1,0 +1,34 @@
+{% extends 'exam_base_dashboard.html' %}
+{% block content %}
+    <h1>COD Approved Responses</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Complaint Code</th>
+                <th>Student</th>
+                <th>Unit</th>
+                <th>Response Date</th>
+                <th>Marks CAT</th>
+                <th>Marks Exam</th>
+                <th>Marks (CAT + Exam)</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for response in responses %}
+                <tr>
+                    <td>{{ response.complaint.complaint_code }}</td>
+                    <td>{{ response.complaint.student.first_name }} {{ response.complaint.student.last_name }}</td>
+                    <td>{{ response.complaint.unit_offering.unit.unit_name }}</td>
+                    <td>{{ response.response_date }}</td>
+                    <td>{{ response.cat_mark }}</td>
+                    <td>{{ response.exam_mark }}</td>
+                    <td>{{ response.cat_mark }} + {{ response.exam_mark }}</td>
+                    <td>
+                        <a href="{% url 'delete-response-confirmation' response.id %}">Delete</a>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

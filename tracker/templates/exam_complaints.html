@@ -23,7 +23,7 @@
             <td>{{ complaint.get_missing_type_display }}</td>
             <td>{{ complaint.submitted_at }}</td>
             <td>
-                <a href="{% url 'lecturer-respond-to-complaint' complaint.complaint_code %}" class="btn btn-success">Respond</a>
+                <a href="{% url 'exam-respond-to-complaint' complaint.complaint_code %}" class="btn btn-success">Respond</a>
             </td>
         </tr>
         {% endfor %}

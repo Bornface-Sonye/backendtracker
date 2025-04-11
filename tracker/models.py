@@ -256,6 +256,17 @@ class ArchivedComplaint(models.Model):
     
     def __str__(self):
         return f"{self.complaint} - {self.resolved_by} - {self.deleted_at}"
+    
+class ArchivedResponse(models.Model):
+    archivedcomplaint = models.OneToOneField(ArchivedComplaint, on_delete=models.CASCADE, primary_key=True)
+    cat_mark = models.IntegerField(null=True, blank=True)  # 0-30
+    exam_mark = models.IntegerField(null=True, blank=True)  # 0-70
+    response_date = models.DateTimeField(auto_now_add=True)
+    comment_by_cod = models.TextField(null=True, blank=True)
+    approved_by_cod = models.BooleanField(default=False)
+    
+    def __str__(self):
+        return f"{self.complaint} - {self.comment_by_cod} - {self.approved_by_cod}"
 
 class System_User(models.Model):
     username = models.CharField(primary_key=True, unique=True, max_length=50, help_text="Enter a valid Username")

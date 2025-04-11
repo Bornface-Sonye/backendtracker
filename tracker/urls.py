@@ -6,7 +6,7 @@ from .views import (
     Exam_NominalRollListView, Exam_ResultListView, Exam_LoadResultView, Exam_LoadNominalRollView, NominalRollListView,
     ResultListView, LoadResultView, LoadNominalRollView, CodComplaintsView, AssignLecturerView, CodRespondView,
     LecturerComplaintsListView, LecturerRespondView, CODResponseListView, CODApproveResponseView,
-    ExamRespondView, ExamComplaintsListView   
+    ExamRespondView, ExamComplaintsListView , DeleteResponseConfirmationView, ExamOfficerApprovedResponsesView  
 )
 
 urlpatterns = [
@@ -51,4 +51,7 @@ urlpatterns = [
     
     path('responses/', CODResponseListView.as_view(), name='cod_responses_list'),
     path('approve-response/<str:complaint_code>/', CODApproveResponseView.as_view(), name='cod_approve_response'),
+    
+    path('approved-responses/', ExamOfficerApprovedResponsesView.as_view(), name='approved-responses'),
+    path('delete-response/<int:response_id>/', DeleteResponseConfirmationView.as_view(), name='delete-response-confirmation'),
 ]

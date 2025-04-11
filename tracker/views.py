@@ -509,32 +509,46 @@ class AssignLecturerView(View):
             return redirect('cod-complaints')
 
         return render(request, 'assign_lecturer.html', {'form': form, 'complaint': complaint})
+class CodRespondView(FormView):
+    template_name = 'cod_respond.html'
+    form_class = ResponseForm
 
-class CodRespondView(View):
-    def get(self, request, complaint_code):
-        username = request.session.get('username')
-        if not username:
-            return redirect('login')
-
-        complaint = get_object_or_404(Complaint, complaint_code=complaint_code)
-        form = CodResponseForm()
-        return render(request, 'cod_response.html', {'form': form, 'complaint': complaint})
-
-    def post(self, request, complaint_code):
-        username = request.session.get('username')
-        if not username:
-            return redirect('login')
-
-        complaint = get_object_or_404(Complaint, complaint_code=complaint_code)
-        form = CodResponseForm(request.POST)
-
-        if form.is_valid():
-            response = form.save(commit=False)
-            response.complaint = complaint
-            response.save()
+    def dispatch(self, request, *args, **kwargs):
+        # Get complaint based on complaint_code from URL kwargs
+        self.complaint = get_object_or_404(Complaint, complaint_code=kwargs['complaint_code'])
+        # Ensure the complaint is not already resolved
+        if self.complaint.resolved:
+            messages.error(request, "This complaint has already been resolved.")
             return redirect('cod-complaints')
+        return super().dispatch(request, *args, **kwargs)
 
-        return render(request, 'cod_response.html', {'form': form, 'complaint': complaint})    
+    def get_initial(self):
+        """Prepare initial form data based on the missing type of the complaint."""
+        initial = super().get_initial()
+        if self.complaint.missing_type == 'CAT':
+            initial['exam_mark'] = None
+        elif self.complaint.missing_type == 'EXAM':
+            initial['cat_mark'] = None
+        return initial
+
+    def form_valid(self, form):
+        """Save the response, mark complaint as resolved, and redirect."""
+        response = form.save(commit=False)
+        response.complaint = self.complaint
+        response.save()
+
+        # Mark the complaint as resolved
+        self.complaint.resolved = True
+        self.complaint.save()
+
+        # Success message and redirect
+        messages.success(self.request, "Response submitted successfully and complaint marked as resolved.")
+        return redirect('cod-complaints')
+
+    def form_invalid(self, form):
+        """Handle invalid form submission."""
+        messages.error(self.request, "There was an error submitting the response.")
+        return self.render_to_response(self.get_context_data(form=form))   
 
 class ExamComplaintsListView(ListView):
     model = Complaint
@@ -562,7 +576,7 @@ class ExamRespondView(FormView):
         # Ensure the complaint is not already resolved
         if self.complaint.resolved:
             messages.error(request, "This complaint has already been resolved.")
-            return redirect('lecturer-complaints')
+            return redirect('exam-complaints')
         return super().dispatch(request, *args, **kwargs)
 
     def get_initial(self):
@@ -718,6 +732,86 @@ class CODApproveResponseView(View):
 
         messages.error(request, "You do not have permission to access this page.")
         return redirect('login')
+
+
+from django.shortcuts import render, get_object_or_404, redirect
+from django.http import Http404
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib import messages
+from django.views.generic import ListView, DetailView
+from .models import Response, Complaint, ArchivedResponse, ArchivedComplaint, Lecturer
+
+class ExamOfficerApprovedResponsesView(LoginRequiredMixin, ListView):
+    model = Response
+    template_name = 'approved_responses.html'
+    context_object_name = 'responses'
+
+    def get_queryset(self):
+        # Get the lecturer based on the logged-in user
+        username = self.request.user.username
+        try:
+            lecturer = Lecturer.objects.get(username=username)
+        except Lecturer.DoesNotExist:
+            raise Http404("Lecturer not found")
+        
+        # Check if the user is an Exam Officer
+        if lecturer.role != 'Exam Officer':
+            raise Http404("You are not authorized to access this page.")
+        
+        # Retrieve all responses approved by COD for the lecturer's school
+        school = lecturer.department.school
+        return Response.objects.filter(
+            complaint__unit_offering__unit__department__school=school,
+            approved_by_cod=True
+        )
+
+class DeleteResponseConfirmationView(LoginRequiredMixin, DetailView):
+    model = Response
+    template_name = 'confirma_delete_response.html'
+    context_object_name = 'response'
+
+    def get_object(self):
+        # Get the response to be deleted
+        response_id = self.kwargs['response_id']
+        response = get_object_or_404(Response, id=response_id)
+
+        # Ensure the logged-in user is an Exam Officer
+        username = self.request.user.username
+        lecturer = Lecturer.objects.get(username=username)
+
+        if lecturer.role != 'Exam Officer':
+            raise Http404("You are not authorized to access this page.")
+        
+        return response
+
+    def post(self, request, *args, **kwargs):
+        # Archive the complaint and response before deletion
+        response = self.get_object()
+        complaint = response.complaint
+        lecturer = Lecturer.objects.get(username=request.user.username)
+        
+        archived_complaint = ArchivedComplaint.objects.create(
+            complaint_code=complaint.complaint_code,
+            student=complaint.student,
+            unit_offering=complaint.unit_offering,
+            resolved_by=lecturer,
+        )
+        
+        ArchivedResponse.objects.create(
+            archivedcomplaint=archived_complaint,
+            cat_mark=response.cat_mark,
+            exam_mark=response.exam_mark,
+            response_date=response.response_date,
+            comment_by_cod=response.comment_by_cod,
+            approved_by_cod=response.approved_by_cod,
+        )
+        
+        # Delete the original complaint and response
+        complaint.delete()
+        response.delete()
+        
+        messages.success(request, "Response and complaint archived and deleted successfully.")
+        return redirect('approved_responses')
 
  
 class LoadNominalRollView(View):
