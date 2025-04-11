@@ -1,104 +1,107 @@
 from django.shortcuts import render, redirect
-from django.views.generic.edit import FormView
-from django.views.generic import TemplateView
-from .forms import StudentSearchForm, MissingMarkComplaintForm
-from .models import Student, UnitOffering, Complaint
-import random
-import string
-
-from django.views.generic.edit import FormView
-from .forms import MissingMarkComplaintForm
-from django.shortcuts import render, redirect
-from .models import Complaint, UnitOffering, Student
-import random
-import string
-
-
-class StudentSearchView(FormView):
-    template_name = 'student_search.html'
-    form_class = StudentSearchForm
-    success_url = '/submit/complaint/'
-
-    def form_valid(self, form):
-        reg_no = form.cleaned_data['reg_no']
-        student = Student.objects.filter(registration_no=reg_no).first()
-
-        if student:
-            # Store data in session
-            self.request.session['student_data'] = {
-                'reg_no': reg_no,
-                'course': form.cleaned_data['course'].id,
-                'year_of_study': form.cleaned_data['year_of_study'],
-                'academic_year': form.cleaned_data['academic_year'].id,
-                'semester': form.cleaned_data['semester']
-            }
-            return super().form_valid(form)
-        else:
-            form.add_error('reg_no', 'Student not found.')
-            return self.form_invalid(form)
-
-
+from django.views import View
+from .forms import StudentForm, MissingMarkForm
+from .models import Student, UnitOffering, Complaint, Course, YearOfStudy, AcademicYear, Semester
 from django.contrib import messages
-from django.views.generic.edit import FormView
-from .forms import MissingMarkComplaintForm
-from django.shortcuts import render, redirect
-from .models import Complaint, UnitOffering, Student
-import random
-import string
+from .utils import generate_unique_complaint_code  # import the utility
 
-class ComplaintSubmissionView(FormView):
-    template_name = 'submit_complaint.html'
-    form_class = MissingMarkComplaintForm
 
-    def form_valid(self, form):
-        student_data = self.request.session.get('student_data')
-        if not student_data:
-            return redirect('student_search')  # Redirect if session data is missing
+class StudentSelectView(View):
+    def get(self, request):
+        form = StudentForm()
+        return render(request, 'student_reg_no.html', {'form': form})
 
-        # Retrieve data from session
-        reg_no = student_data['reg_no']
-        student = Student.objects.get(registration_no=reg_no)
+    def post(self, request):
+        form = StudentForm(request.POST)
+        if form.is_valid():
+            reg_no = form.cleaned_data['registration_no']
+            course_code = form.cleaned_data['course']
+            year_of_study = form.cleaned_data['year_of_study']
+            academic_year = form.cleaned_data['academic_year']
+            semester = form.cleaned_data['semester']
 
-        # Generate Complaint Code (system-generated)
-        complaint_code = self.generate_complaint_code()
+            try:
+                student = Student.objects.get(registration_no=reg_no, course__course_code=course_code)
+            except Student.DoesNotExist:
+                form.add_error('registration_no', 'Student not found.')
+                return render(request, 'student_reg_no.html', {'form': form})
 
-        # Get the selected unit offering
-        unit_offering = form.cleaned_data['unit_offering']
-        missing_mark = form.cleaned_data['missing_mark']
+            course = Course.objects.get(course_code=course_code)
 
-        # Save the complaint
-        complaint = Complaint(
-            complaint_code=complaint_code,
-            student=student,
-            unit_offering=unit_offering,
-            missing_type=missing_mark
+            request.session['student_data'] = {
+                'reg_no': reg_no,
+                'course': course.course_code,
+                'year_of_study': year_of_study.study_year,
+                'academic_year': academic_year.academic_year,
+                'semester_id': semester.semester_id
+            }
+
+            return redirect('missing_mark_select')
+
+        return render(request, 'student_reg_no.html', {'form': form})
+
+
+class MissingMarkSelectView(View):
+    def get_student_unit_queryset(self, student_data):
+        course = Course.objects.get(course_code=student_data['course'])
+        year_of_study = YearOfStudy.objects.get(study_year=student_data['year_of_study'])
+        academic_year = AcademicYear.objects.get(academic_year=student_data['academic_year'])
+        semester = Semester.objects.get(semester_id=student_data['semester_id'])
+
+        return UnitOffering.objects.filter(
+            course=course,
+            year_of_study=year_of_study,
+            academic_year=academic_year,
+            semester=semester
         )
-        complaint.save()
 
-        # Show success message
-        messages.success(self.request, "Your complaint has been submitted successfully!")
+    def get(self, request):
+        student_data = request.session.get('student_data')
+        if not student_data:
+            return redirect('student_select')
 
-        return self.render_to_response(self.get_context_data(form=form))
+        units = self.get_student_unit_queryset(student_data)
 
-    def form_invalid(self, form):
-        messages.error(self.request, "There was an error with your submission. Please check the form and try again.")
-        return self.render_to_response(self.get_context_data(form=form))
+        form = MissingMarkForm()
+        form.fields['unit'].queryset = units
 
-    def generate_complaint_code(self):
-        """ Generate a random complaint code """
-        return 'CMP-' + ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+        return render(request, 'post_complaint.html', {'form': form})
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        student_data = self.request.session.get('student_data')
+    def post(self, request):
+        student_data = request.session.get('student_data')
+        if not student_data:
+            return redirect('student_select')
 
-        if student_data:
-            # Filter units based on session data
-            units = UnitOffering.objects.filter(
-                course_id=student_data['course'],
-                academic_year_id=student_data['academic_year'],
-                semester=student_data['semester'],
-                year_of_study=student_data['year_of_study']
+        units = self.get_student_unit_queryset(student_data)
+
+        form = MissingMarkForm(request.POST)
+        form.fields['unit'].queryset = units
+
+        if form.is_valid():
+            unit = form.cleaned_data['unit']
+            missing_types = form.cleaned_data['missing_mark_type']
+            student = Student.objects.get(registration_no=student_data['reg_no'])
+
+            # Check if complaint already exists
+            if Complaint.objects.filter(student=student, unit_offering=unit).exists():
+                messages.warning(request, 'You have already submitted a complaint for this unit.')
+                return render(request, 'post_complaint.html', {'form': form})
+
+            # Determine missing type
+            missing_type = 'BOTH' if 'CAT' in missing_types and 'EXAM' in missing_types else missing_types[0]
+
+            # Generate complaint code
+            complaint_code = generate_unique_complaint_code()
+
+            # Save the complaint
+            Complaint.objects.create(
+                complaint_code=complaint_code,
+                student=student,
+                unit_offering=unit,
+                missing_type=missing_type
             )
-            context['units'] = units
-        return context
+
+            messages.success(request, 'Your complaint has been successfully submitted.')
+            return render(request, 'post_complaint.html', {'form': form})
+
+        return render(request, 'post_complaint.html', {'form': form})

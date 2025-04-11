@@ -2,7 +2,6 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path('student/search/', views.StudentSearchView.as_view(), name='student_search'),
-    path('submit/complaint/', views.ComplaintSubmissionView.as_view(), name='submit_complaint'),
-    path('complaint/success/', views.ComplaintSuccessView.as_view(), name='complaint_success'),
+    path('student/', views.StudentSelectView.as_view(), name='student_select'),
+    path('complaints/', views.MissingMarkSelectView.as_view(), name='missing_mark_select'),
 ]
