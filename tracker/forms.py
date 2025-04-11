@@ -88,6 +88,9 @@ class ResetForm(forms.Form):  # Use forms.Form instead of ModelForm
             user.save()
         return user
 
+class UploadFileForm(forms.Form):
+    file = forms.FileField(label='Select a CSV or Excel file')
+
 
 class StudentForm(forms.Form):
     registration_no = forms.CharField(max_length=50, label='Registration Number')
