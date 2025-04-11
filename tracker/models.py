@@ -243,7 +243,14 @@ class Response(models.Model):
         return f"{self.complaint} - {self.comment_by_cod} - {self.approved_by_cod}"
 
 class ArchivedComplaint(models.Model):
-    complaint = models.OneToOneField(Complaint, on_delete=models.CASCADE, primary_key=True)
+    complaint_code = models.CharField(
+        max_length=100,
+        primary_key=True,
+        unique=True,
+        help_text="Please Enter Complaint Code"
+    )
+    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+    unit_offering = models.ForeignKey(UnitOffering, on_delete=models.CASCADE)
     resolved_by = models.ForeignKey(Lecturer, on_delete=models.SET_NULL, null=True)
     deleted_at = models.DateTimeField(auto_now_add=True)
     

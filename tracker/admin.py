@@ -2,7 +2,7 @@
 from django.contrib import admin
 from .models import (
     School, Department, Program, Course, AcademicYear, Semester, YearOfStudy, Unit, Lecturer, Student,
-    UnitOffering, Complaint, Response, ArchivedComplaint
+    UnitOffering, Complaint, Response, ArchivedComplaint, Result, NominalRoll, System_user, PasswordResetToken
 )
 
 @admin.register(School)
@@ -52,21 +52,21 @@ class UnitAdmin(admin.ModelAdmin):
 
 @admin.register(Lecturer)
 class LecturerAdmin(admin.ModelAdmin):
-    list_display = ('employee_no', 'phone_number', 'role')
-    list_filter = ('role',)
-    search_fields = ('employee_no', 'phone_number', 'role')
+    list_display = ('employee_no', 'phone_number', 'role', 'department')
+    list_filter = ('role', 'department')
+    search_fields = ('employee_no', 'phone_number', 'role', 'department')
 
 @admin.register(Student)
 class StudentAdmin(admin.ModelAdmin):
-    list_display = ('registration_no', 'program', 'course')
+    list_display = ('reg_no', 'program', 'course')
     list_filter = ('program', 'course')
-    search_fields = ('registration_no',)
+    search_fields = ('reg_no',)
 
 @admin.register(UnitOffering)
 class UnitOfferingAdmin(admin.ModelAdmin):
     list_display = ('offering_id', 'unit', 'course', 'academic_year', 'semester', 'year_of_study', 'lecturer')
     list_filter = ('unit', 'course', 'academic_year', 'semester', 'year_of_study')
-    search_fields = ('offering_id',)
+    search_fields = ('offering_id', 'unit', 'lecturer', 'academic_year', 'semester', 'year_of_study')
 
 @admin.register(Complaint)
 class ComplaintAdmin(admin.ModelAdmin):
@@ -82,6 +82,30 @@ class ResponseAdmin(admin.ModelAdmin):
 
 @admin.register(ArchivedComplaint)
 class ArchivedComplaintAdmin(admin.ModelAdmin):
-    list_display = ('complaint', 'resolved_by', 'deleted_at')
-    list_filter = ('resolved_by',)
-    search_fields = ('complaint__complaint_id',)
+    list_display = ('complaint_code', 'student', 'unit_offering', 'resolved_by', 'deleted_at')
+    list_filter = ('student', 'unit_offering', 'resolved_by',)
+    search_fields = ('student',)
+
+@admin.register(NominalRoll)   
+class NominalRollAdmin(admin.ModelAdmin):
+    list_display = ('unit_code', 'reg_no', 'academic_year')
+    list_filter = ('unit_code', 'reg_no', 'academic_year',)
+    search_fields = ('unit_code', 'reg_no', 'academic_year',)
+ 
+@admin.register(Result)  
+class ResultAdmin(admin.ModelAdmin):
+    list_display = ('unit_code', 'reg_no', 'academic_year', 'cat', 'exam')
+    list_filter = ('unit_code', 'reg_no', 'academic_year',)
+    search_fields = ('unit_code', 'reg_no', 'academic_year',)
+     
+@admin.register(System_user)
+class System_UserAdmin(admin.ModelAdmin):
+    list_display = ('username',)
+    list_filter = ('username',)
+    search_fields = ('username',)
+ 
+@admin.register(PasswordResetToken)  
+class PasswordResetTokenAdmin(admin.ModelAdmin):
+    list_display = ('username', 'token')
+    list_filter = ('username', 'token',)
+    search_fields = ('username', 'token', 'created_at')
