@@ -2,7 +2,8 @@
 from django.contrib import admin
 from .models import (
     School, Department, Program, Course, AcademicYear, Semester, YearOfStudy, Unit, Lecturer, Student,
-    UnitOffering, Complaint, Response, ArchivedComplaint, Result, NominalRoll, System_user, PasswordResetToken
+    UnitOffering, Complaint, Response, ArchivedComplaint, Result, NominalRoll, System_user, PasswordResetToken,
+    ArchivedResponse
 )
 
 @admin.register(School)
