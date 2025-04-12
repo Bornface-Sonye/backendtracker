@@ -537,7 +537,7 @@ class CodRespondView(FormView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['student_reg_no'] = self.complaint.student.reg_no
-        context['unit_code'] = self.complaint.unit_offering.unit_code
+        context['unit_code'] = self.complaint.unit_offering.unit.unit_code
         context['academic_year'] = self.complaint.unit_offering.academic_year.academic_year
         context['missing_type'] = self.complaint.missing_type  # Pass missing_type to template
         return context
@@ -545,9 +545,9 @@ class CodRespondView(FormView):
     def form_valid(self, form):
         """Save the response, mark complaint as resolved, and redirect."""
         response = form.save(commit=False)
-        response.student = self.complaint.student.reg_no
-        response.unit_offering = self.complaint.unit_offering.unit_code
-        response.academic_year = self.complaint.unit_offering.academic_year.academic_year
+        response.student = self.complaint.student
+        response.unit_offering = self.complaint.unit_offering
+        response.academic_year = self.complaint.unit_offering.academic_year
         response.save()
 
         # Mark the complaint as resolved
@@ -610,9 +610,9 @@ class ExamRespondView(FormView):
     def form_valid(self, form):
         """Save the response, mark complaint as resolved, and redirect."""
         response = form.save(commit=False)
-        response.student = self.complaint.student.reg_no
-        response.unit_offering = self.complaint.unit_offering.unit_code
-        response.academic_year = self.complaint.unit_offering.academic_year.academic_year
+        response.student = self.complaint.student
+        response.unit_offering = self.complaint.unit_offering
+        response.academic_year = self.complaint.unit_offering.academic_year
         response.save()
 
         # Mark the complaint as resolved
@@ -676,9 +676,9 @@ class LecturerRespondView(FormView):
     def form_valid(self, form):
         """Save the response, mark complaint as resolved, and redirect."""
         response = form.save(commit=False)
-        response.student = self.complaint.student.reg_no
-        response.unit_offering = self.complaint.unit_offering.unit_code
-        response.academic_year = self.complaint.unit_offering.academic_year.academic_year
+        response.student = self.complaint.student
+        response.unit_offering = self.complaint.unit_offering
+        response.academic_year = self.complaint.unit_offering.academic_year
         response.save()
 
         # Mark the complaint as resolved
