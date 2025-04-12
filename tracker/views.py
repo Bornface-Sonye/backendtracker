@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.views import View
 from django.urls import reverse_lazy, reverse
 from django.contrib.auth import logout  # Import the logout function
-from django.views.generic import DeleteView, ListView, FormView
+from django.views.generic import DeleteView, ListView, FormView, DetailView
 from django.conf import settings
 from django.core.mail import send_mail
 from django.utils.crypto import get_random_string
@@ -13,6 +13,8 @@ from django.db import transaction
 from django.http import JsonResponse
 from django.db import IntegrityError
 from django.contrib.auth.mixins import LoginRequiredMixin
+
+from django.http import Http404
 
 import re
 from django.core.exceptions import ValidationError
@@ -25,7 +27,7 @@ from .utils import generate_unique_complaint_code
 
 from .models import (
 Student, UnitOffering, Complaint, Course, YearOfStudy, AcademicYear, Semester, Lecturer, LecturerUnit,
-PasswordResetToken, Complaint, NominalRoll, Result, Response, Unit, Lecturer,
+PasswordResetToken, NominalRoll, Result, Response, Unit, Lecturer, ArchivedResponse, ArchivedComplaint,
 System_User
 )
 
@@ -187,7 +189,7 @@ class LoginView(View):
                         request.session['username'] = user.username
                         request.session['role'] = lecturer.role
                         request.session['employee_no'] = lecturer.employee_no
-                        request.session['dep_code'] = str(lecturer.dep_code.dep_code)
+                        request.session['department_code'] = str(lecturer.department.department_code)
 
                         if lecturer.role == "Member":
                             return redirect('lecturer-dashboard')
@@ -284,134 +286,6 @@ class ResetPasswordConfirmView(View):
         # If form is not valid, show errors
         return render(request, self.template_name, {'form': form, 'token': token, 'error_message': "Invalid form submission."})
 
-class Lecturer_DashboardView(View):
-    def get(self, request):
-        # Retrieve username from session
-        username = request.session.get('username')
-        if not username:
-            return redirect('login')  # Redirect to login if username is missing
-
-        # Get logged-in lecturer details
-        lecturer = Lecturer.objects.filter(username=username).first()
-        last_name = lecturer.last_name  # Add last name to context
-        user = System_User.objects.get(username=username)
-        if not lecturer:
-            return redirect('login')  # Redirect if no matching lecturer found
-
-        department_name = lecturer.department_code.department_name
-
-        # Total students taking courses related to the lecturer's department
-        total_students = Student.objects.filter(
-            course_code__department_code=lecturer.department_code
-        ).count()
-
-        # Total lecturers within the same department
-        total_lecturers_in_department = Lecturer.objects.filter(
-            department_code=lecturer.department_code
-        ).count()
-
-        # Total units related to the lecturer from LecturerUnit model
-        total_units_for_lecturer = LecturerUnit.objects.filter(
-            employee_no=lecturer.employee
-        ).count()
-
-        # Filter complaints related to lecturer's unit codes, academic year, and course codes
-        lecturer_unit_codes = LecturerUnit.objects.filter(
-            employee=lecturer.employee_no
-        ).values_list('unit_code', flat=True)
-
-        related_complaints_count = Complaint.objects.filter(
-            unit_code__in=lecturer_unit_codes,
-            academic_year__in=LecturerUnit.objects.filter(employee_no=lecturer).values_list('academic_year', flat=True),
-            reg_no__course_code__in=LecturerUnit.objects.filter(employee_no=lecturer).values_list('course_code', flat=True)
-        ).count()
-
-
-        # Get all LecturerUnit instances for the lecturer
-        units = LecturerUnit.objects.filter(employee_no=lecturer.employee_no)
-
-
-        # Fetch all courses in the lecturer's department
-        courses = Course.objects.filter(department_code=lecturer.department_code)
-
-        # Pass calculated counts, units, and courses to the template
-        context = {
-            'total_students': total_students,
-            'total_lecturers_in_department': total_lecturers_in_department,
-            'total_units_for_lecturer': total_units_for_lecturer,
-            'related_complaints_count': related_complaints_count,
-            'last_name': last_name,
-            'user': user,
-            'units': units,
-            'courses': courses,
-            'department_name': department_name,
-        }
-
-        return render(request, 'lecturer_dashboard.html', context)
-
-class Exam_DashboardView(View):
-    def get(self, request):
-        # Retrieve username from session
-        username = request.session.get('username')
-        if not username:
-            return redirect('login')  # Redirect to login if username is missing
-
-        # Get logged-in lecturer details
-        lecturer = Lecturer.objects.filter(username=username).first()
-        last_name = lecturer.last_name  # Add last name to context
-        user = System_User.objects.get(username=username)
-        if not lecturer:
-            return redirect('login')  # Redirect if no matching lecturer found
-
-        department_name = lecturer.department_code.department_name
-
-        # Total students taking courses related to the lecturer's department
-        total_students = Student.objects.filter(
-            course_code__dep_code=lecturer.department_code
-        ).count()
-
-        # Total lecturers within the same department
-        total_lecturers_in_department = Lecturer.objects.filter(
-            department_code=lecturer.dep_code
-        ).count()
-
-        # Total units related to the lecturer from LecturerUnit model
-        total_units_for_lecturer = LecturerUnit.objects.filter(
-            employee_no=lecturer.employee_no
-        ).count()
-
-        # Filter complaints related to lecturer's unit codes, academic year, and course codes
-        lecturer_unit_codes = LecturerUnit.objects.filter(
-            employee_no=lecturer.employee_no
-        ).values_list('unit_code', flat=True)
-
-        related_complaints_count = Complaint.objects.filter(
-            unit_code__in=lecturer_unit_codes,
-            academic_year__in=LecturerUnit.objects.filter(employee_no=lecturer).values_list('academic_year', flat=True),
-            reg_no__course_code__in=LecturerUnit.objects.filter(employee_no=lecturer).values_list('course_code', flat=True)
-        ).count()
-
-        # Get all LecturerUnit instances for the lecturer
-        units = LecturerUnit.objects.filter(employee_no=lecturer.employee_no)
-
-        # Fetch all courses in the lecturer's department
-        courses = Course.objects.filter(department_code=lecturer.department_code)
-
-        # Pass calculated counts, units, and courses to the template
-        context = {
-            'total_students': total_students,
-            'total_lecturers_in_department': total_lecturers_in_department,
-            'total_units_for_lecturer': total_units_for_lecturer,
-            'related_complaints_count': related_complaints_count,
-            'last_name': last_name,
-            'user': user,
-            'units': units,
-            'courses': courses,
-            'department_name': department_name,
-        }
-
-        return render(request, 'exam_dashboard.html', context)
-
 class COD_DashboardView(View):
     def get(self, request):
         username = request.session.get('username')
@@ -426,27 +300,30 @@ class COD_DashboardView(View):
         department = lecturer.department
         department_name = department.department_name
 
-        # Set department and employee_no in session if not already set
+        # Set session variables if not set
         request.session.setdefault('department_code', str(department.department_code))
         request.session.setdefault('employee_no', lecturer.employee_no)
 
-        total_students = Student.objects.filter(course_code__department_code=department).count()
-        total_lecturers_in_department = Lecturer.objects.filter(dep_code=department).count()
+        # Total students in the department
+        total_students = Student.objects.filter(course__program__department=department).count()
 
-        lecturer_units = LecturerUnit.objects.filter(employee_no=lecturer.employee_no)
-        total_units_for_lecturer = lecturer_units.count()
+        # Total lecturers in the department
+        total_lecturers_in_department = Lecturer.objects.filter(department=department).count()
 
-        unit_codes = lecturer_units.values_list('unit_code', flat=True)
-        academic_years = lecturer_units.values_list('academic_year', flat=True)
-        course_codes = lecturer_units.values_list('course_code', flat=True)
+        # Fetch UnitOfferings assigned to the current lecturer
+        lecturer_unit_offerings = UnitOffering.objects.filter(lecturer=lecturer)
 
+        # Unique units taught by the lecturer
+        unit_ids = lecturer_unit_offerings.values_list('unit', flat=True).distinct()
+        total_units_for_lecturer = unit_ids.count()
+
+        # Complaints related to those unit offerings
         related_complaints_count = Complaint.objects.filter(
-            unit_code__in=unit_codes,
-            academic_year__in=academic_years,
-            reg_no__course_code__in=course_codes
+            unit_offering__in=lecturer_unit_offerings
         ).count()
 
-        courses = Course.objects.filter(dep_code=department)
+        # List of courses in this department
+        courses = Course.objects.filter(program__department=department)
 
         context = {
             'total_students': total_students,
@@ -455,12 +332,118 @@ class COD_DashboardView(View):
             'related_complaints_count': related_complaints_count,
             'last_name': lecturer.last_name,
             'user': user,
-            'units': lecturer_units,
+            'units': Unit.objects.filter(pk__in=unit_ids),
             'courses': courses,
             'department_name': department_name,
         }
 
         return render(request, 'cod_dashboard.html', context)
+
+class Exam_DashboardView(View):
+    def get(self, request):
+        username = request.session.get('username')
+        if not username:
+            return redirect('login')
+
+        lecturer = Lecturer.objects.filter(username=username).first()
+        if not lecturer:
+            return redirect('login')
+
+        user = System_User.objects.get(username=username)
+        department = lecturer.department
+        department_name = department.department_name
+
+        # Set session variables if not set
+        request.session.setdefault('department_code', str(department.department_code))
+        request.session.setdefault('employee_no', lecturer.employee_no)
+
+        # Total students in the department
+        total_students = Student.objects.filter(course__program__department=department).count()
+
+        # Total lecturers in the department
+        total_lecturers_in_department = Lecturer.objects.filter(department=department).count()
+
+        # Fetch UnitOfferings assigned to the current lecturer
+        lecturer_unit_offerings = UnitOffering.objects.filter(lecturer=lecturer)
+
+        # Unique units taught by the lecturer
+        unit_ids = lecturer_unit_offerings.values_list('unit', flat=True).distinct()
+        total_units_for_lecturer = unit_ids.count()
+
+        # Complaints related to those unit offerings
+        related_complaints_count = Complaint.objects.filter(
+            unit_offering__in=lecturer_unit_offerings
+        ).count()
+
+        # List of courses in this department
+        courses = Course.objects.filter(program__department=department)
+
+        context = {
+            'total_students': total_students,
+            'total_lecturers_in_department': total_lecturers_in_department,
+            'total_units_for_lecturer': total_units_for_lecturer,
+            'related_complaints_count': related_complaints_count,
+            'last_name': lecturer.last_name,
+            'user': user,
+            'units': Unit.objects.filter(pk__in=unit_ids),
+            'courses': courses,
+            'department_name': department_name,
+        }
+
+        return render(request, 'exam_dashboard.html', context)
+    
+class Lecturer_DashboardView(View):
+    def get(self, request):
+        username = request.session.get('username')
+        if not username:
+            return redirect('login')
+
+        lecturer = Lecturer.objects.filter(username=username).first()
+        if not lecturer:
+            return redirect('login')
+
+        user = System_User.objects.get(username=username)
+        department = lecturer.department
+        department_name = department.department_name
+
+        # Set session variables if not set
+        request.session.setdefault('department_code', str(department.department_code))
+        request.session.setdefault('employee_no', lecturer.employee_no)
+
+        # Total students in the department
+        total_students = Student.objects.filter(course__program__department=department).count()
+
+        # Total lecturers in the department
+        total_lecturers_in_department = Lecturer.objects.filter(department=department).count()
+
+        # Fetch UnitOfferings assigned to the current lecturer
+        lecturer_unit_offerings = UnitOffering.objects.filter(lecturer=lecturer)
+
+        # Unique units taught by the lecturer
+        unit_ids = lecturer_unit_offerings.values_list('unit', flat=True).distinct()
+        total_units_for_lecturer = unit_ids.count()
+
+        # Complaints related to those unit offerings
+        related_complaints_count = Complaint.objects.filter(
+            unit_offering__in=lecturer_unit_offerings
+        ).count()
+
+        # List of courses in this department
+        courses = Course.objects.filter(program__department=department)
+
+        context = {
+            'total_students': total_students,
+            'total_lecturers_in_department': total_lecturers_in_department,
+            'total_units_for_lecturer': total_units_for_lecturer,
+            'related_complaints_count': related_complaints_count,
+            'last_name': lecturer.last_name,
+            'user': user,
+            'units': Unit.objects.filter(pk__in=unit_ids),
+            'courses': courses,
+            'department_name': department_name,
+        }
+
+        return render(request, 'lecturer_dashboard.html', context)
 
 class CodComplaintsView(View):
     def get(self, request):
@@ -733,14 +716,6 @@ class CODApproveResponseView(View):
         messages.error(request, "You do not have permission to access this page.")
         return redirect('login')
 
-
-from django.shortcuts import render, get_object_or_404, redirect
-from django.http import Http404
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib import messages
-from django.views.generic import ListView, DetailView
-from .models import Response, Complaint, ArchivedResponse, ArchivedComplaint, Lecturer
-
 class ExamOfficerApprovedResponsesView(LoginRequiredMixin, ListView):
     model = Response
     template_name = 'approved_responses.html'
@@ -812,7 +787,6 @@ class DeleteResponseConfirmationView(LoginRequiredMixin, DetailView):
         
         messages.success(request, "Response and complaint archived and deleted successfully.")
         return redirect('approved_responses')
-
  
 class LoadNominalRollView(View):
     def get(self, request):

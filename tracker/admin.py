@@ -2,8 +2,8 @@
 from django.contrib import admin
 from .models import (
     School, Department, Program, Course, AcademicYear, Semester, YearOfStudy, Unit, Lecturer, Student,
-    UnitOffering, Complaint, Response, ArchivedComplaint, Result, NominalRoll, System_user, PasswordResetToken,
-    ArchivedResponse
+    UnitOffering, Complaint, Response, ArchivedComplaint, Result, NominalRoll, System_User, PasswordResetToken,
+    ArchivedResponse, LecturerUnit
 )
 
 @admin.register(School)
@@ -99,7 +99,7 @@ class ResultAdmin(admin.ModelAdmin):
     list_filter = ('unit_code', 'reg_no', 'academic_year',)
     search_fields = ('unit_code', 'reg_no', 'academic_year',)
      
-@admin.register(System_user)
+@admin.register(System_User)
 class System_UserAdmin(admin.ModelAdmin):
     list_display = ('username',)
     list_filter = ('username',)
@@ -115,3 +115,10 @@ class ArchivedResponseAdmin(admin.ModelAdmin):
     list_display = ('archivedcomplaint', 'cat_mark', 'exam_mark', 'comment_by_cod', 'approved_by_cod')
     list_filter = ('approved_by_cod',)
     search_fields = ('approved_by_cod',)
+
+@admin.register(LecturerUnit)
+class LecturerUnitAdmin(admin.ModelAdmin):
+    list_display = ('unit_code', 'employee_no', 'academic_year')
+    list_filter = ('unit_code', 'employee_no', 'academic_year')
+    search_fields = ('unit_code', 'employee_no', 'academic_year',)  
+

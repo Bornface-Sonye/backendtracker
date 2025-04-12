@@ -6,7 +6,8 @@ from .views import (
     Exam_NominalRollListView, Exam_ResultListView, Exam_LoadResultView, Exam_LoadNominalRollView, NominalRollListView,
     ResultListView, LoadResultView, LoadNominalRollView, CodComplaintsView, AssignLecturerView, CodRespondView,
     LecturerComplaintsListView, LecturerRespondView, CODResponseListView, CODApproveResponseView,
-    ExamRespondView, ExamComplaintsListView , DeleteResponseConfirmationView, ExamOfficerApprovedResponsesView  
+    ExamRespondView, ExamComplaintsListView , DeleteResponseConfirmationView, ExamOfficerApprovedResponsesView, 
+    ResetPasswordView, ResetPasswordConfirmView  
 )
 
 urlpatterns = [
@@ -20,6 +21,9 @@ urlpatterns = [
     path('cod-dashboard/',COD_DashboardView.as_view(), name='cod-dashboard'),
     
     path('logout/', LogoutView.as_view(), name='logout'),
+    
+    path('reset-password/', ResetPasswordView.as_view(), name='reset-password'),
+    path('reset-password/<str:token>/', ResetPasswordConfirmView.as_view(), name='reset-password'),
     
     path('cod/load-nominal-roll/', COD_LoadNominalRollView.as_view(), name='cod-load-nominal-roll'),
     path('cod/load-result/', COD_LoadResultView.as_view(), name='cod-load-result'),
