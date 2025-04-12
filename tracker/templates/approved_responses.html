@@ -1,34 +1,39 @@
 {% extends 'exam_base_dashboard.html' %}
+
 {% block content %}
-    <h1>COD Approved Responses</h1>
-    <table>
-        <thead>
-            <tr>
-                <th>Complaint Code</th>
-                <th>Student</th>
-                <th>Unit</th>
-                <th>Response Date</th>
-                <th>Marks CAT</th>
-                <th>Marks Exam</th>
-                <th>Marks (CAT + Exam)</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for response in responses %}
+    <h1 style="font-family: Arial, sans-serif; color: #333; text-align: center;">COD Approved Responses</h1>
+
+    {% for department, responses in responses_by_department.items %}
+        <h2 style="font-family: Arial, sans-serif; color: #4CAF50; padding: 10px 0;">{{ department.department_name }}</h2>
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-family: Arial, sans-serif;">
+            <thead style="background-color: #4CAF50; color: white; text-align: left;">
                 <tr>
-                    <td>{{ response.complaint.complaint_code }}</td>
-                    <td>{{ response.complaint.student.first_name }} {{ response.complaint.student.last_name }}</td>
-                    <td>{{ response.complaint.unit_offering.unit.unit_name }}</td>
-                    <td>{{ response.response_date }}</td>
-                    <td>{{ response.cat_mark }}</td>
-                    <td>{{ response.exam_mark }}</td>
-                    <td>{{ response.cat_mark }} + {{ response.exam_mark }}</td>
-                    <td>
-                        <a href="{% url 'delete-response-confirmation' response.id %}">Delete</a>
-                    </td>
+                    <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">Complaint Code</th>
+                    <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">Student</th>
+                    <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">Unit</th>
+                    <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">Response Date</th>
+                    <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">Marks CAT</th>
+                    <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">Marks Exam</th>
+                    <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">Marks (CAT + Exam)</th>
+                    <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">Actions</th>
                 </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                {% for response in responses %}
+                    <tr style="background-color: #f9f9f9; border-bottom: 1px solid #ddd;">
+                        <td style="padding: 12px; text-align: center;">{{ response.complaint.complaint_code }}</td>
+                        <td style="padding: 12px; text-align: center;">{{ response.complaint.student.first_name }} {{ response.complaint.student.last_name }}</td>
+                        <td style="padding: 12px; text-align: center;">{{ response.complaint.unit_offering.unit.unit_name }}</td>
+                        <td style="padding: 12px; text-align: center;">{{ response.response_date }}</td>
+                        <td style="padding: 12px; text-align: center;">{{ response.cat_mark }}</td>
+                        <td style="padding: 12px; text-align: center;">{{ response.exam_mark }}</td>
+                        <td style="padding: 12px; text-align: center;">{{ response.cat_mark }} + {{ response.exam_mark }}</td>
+                        <td style="padding: 12px; text-align: center;">
+                            <a href="{% url 'delete-response' response.pk %}" style="color: red; text-decoration: none; font-weight: bold;">Delete</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endfor %}
 {% endblock %}

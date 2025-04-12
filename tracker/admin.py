@@ -2,8 +2,7 @@
 from django.contrib import admin
 from .models import (
     School, Department, Program, Course, AcademicYear, Semester, YearOfStudy, Unit, Lecturer, Student,
-    UnitOffering, Complaint, Response, ArchivedComplaint, Result, NominalRoll, System_User, PasswordResetToken,
-    ArchivedResponse, LecturerUnit
+    UnitOffering, Complaint, Response, Result, NominalRoll, System_User, PasswordResetToken, LecturerUnit
 )
 
 @admin.register(School)
@@ -77,15 +76,9 @@ class ComplaintAdmin(admin.ModelAdmin):
 
 @admin.register(Response)
 class ResponseAdmin(admin.ModelAdmin):
-    list_display = ('complaint', 'cat_mark', 'exam_mark', 'response_date', 'comment_by_cod', 'approved_by_cod')
-    list_filter = ('complaint',)
-    search_fields = ('complaint__complaint_id',)
-
-@admin.register(ArchivedComplaint)
-class ArchivedComplaintAdmin(admin.ModelAdmin):
-    list_display = ('complaint_code', 'student', 'unit_offering', 'resolved_by', 'deleted_at')
-    list_filter = ('student', 'unit_offering', 'resolved_by',)
-    search_fields = ('student',)
+    list_display = ('student', 'cat_mark', 'exam_mark', 'response_date', 'comment_by_cod', 'approved_by_cod')
+    list_filter = ('student', 'unit_offering')
+    search_fields = ('student', 'unit_offering')
 
 @admin.register(NominalRoll)   
 class NominalRollAdmin(admin.ModelAdmin):
@@ -110,11 +103,6 @@ class PasswordResetTokenAdmin(admin.ModelAdmin):
     list_display = ('username', 'token')
     list_filter = ('username', 'token',)
     search_fields = ('username', 'token', 'created_at')
-@admin.register(ArchivedResponse)
-class ArchivedResponseAdmin(admin.ModelAdmin):
-    list_display = ('archivedcomplaint', 'cat_mark', 'exam_mark', 'comment_by_cod', 'approved_by_cod')
-    list_filter = ('approved_by_cod',)
-    search_fields = ('approved_by_cod',)
 
 @admin.register(LecturerUnit)
 class LecturerUnitAdmin(admin.ModelAdmin):

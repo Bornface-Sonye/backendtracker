@@ -19,7 +19,7 @@
             <td>{{ response.complaint.student.reg_no }}</td>
             <td>{{ response.complaint.unit_offering.unit.unit_code }}</td>
             <td>{{ response.response_date }}</td>
-            <td><a href="{% url 'cod_approve_response' complaint_code=response.complaint.complaint_code %}" class="btn btn-info">Approve</a></td>
+            <td><a href="{% url 'cod-approve-response' response_id=response.response_id %}" class="btn btn-info">Approve</a></td>
         </tr>
         {% endfor %}
     </tbody>

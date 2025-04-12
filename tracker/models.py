@@ -230,43 +230,23 @@ class Complaint(models.Model):
     def __str__(self):
         return f"{self.complaint_code} - {self.student} - {self.missing_type}"
         
-    
-class Response(models.Model):
-    complaint = models.OneToOneField(Complaint, on_delete=models.CASCADE, primary_key=True)
-    cat_mark = models.IntegerField(null=True, blank=True)  # 0-30
-    exam_mark = models.IntegerField(null=True, blank=True)  # 0-70
-    response_date = models.DateTimeField(auto_now_add=True)
-    comment_by_cod = models.TextField(null=True, blank=True)
-    approved_by_cod = models.BooleanField(default=False)
-    
-    def __str__(self):
-        return f"{self.complaint} - {self.comment_by_cod} - {self.approved_by_cod}"
 
-class ArchivedComplaint(models.Model):
-    complaint_code = models.CharField(
-        max_length=100,
-        primary_key=True,
-        unique=True,
-        help_text="Please Enter Complaint Code"
-    )
+class Response(models.Model):
+    response_id = models.AutoField(primary_key=True, unique=True)
     student = models.ForeignKey(Student, on_delete=models.CASCADE)
     unit_offering = models.ForeignKey(UnitOffering, on_delete=models.CASCADE)
-    resolved_by = models.ForeignKey(Lecturer, on_delete=models.SET_NULL, null=True)
-    deleted_at = models.DateTimeField(auto_now_add=True)
-    
-    def __str__(self):
-        return f"{self.complaint} - {self.resolved_by} - {self.deleted_at}"
-    
-class ArchivedResponse(models.Model):
-    archivedcomplaint = models.OneToOneField(ArchivedComplaint, on_delete=models.CASCADE, primary_key=True)
     cat_mark = models.IntegerField(null=True, blank=True)  # 0-30
     exam_mark = models.IntegerField(null=True, blank=True)  # 0-70
     response_date = models.DateTimeField(auto_now_add=True)
     comment_by_cod = models.TextField(null=True, blank=True)
     approved_by_cod = models.BooleanField(default=False)
     
+    # Django automatically adds an 'id' primary key by default
+    # No need to explicitly define the primary key field
+
     def __str__(self):
-        return f"{self.archivedcomplaint} - {self.comment_by_cod} - {self.approved_by_cod}"
+        return f"{self.comment_by_cod} - {self.approved_by_cod}"
+
 
 class System_User(models.Model):
     username = models.CharField(primary_key=True, unique=True, max_length=50, help_text="Enter a valid Username")

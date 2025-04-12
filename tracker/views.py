@@ -27,13 +27,12 @@ from .utils import generate_unique_complaint_code
 
 from .models import (
 Student, UnitOffering, Complaint, Course, YearOfStudy, AcademicYear, Semester, Lecturer, LecturerUnit,
-PasswordResetToken, NominalRoll, Result, Response, Unit, Lecturer, ArchivedResponse, ArchivedComplaint,
-System_User
+PasswordResetToken, NominalRoll, Result, Response, Unit, Lecturer, System_User, Department
 )
 
 from .forms import (
 SignUpForm, LoginForm, StudentForm, MissingMarkForm, UploadFileForm, ResetForm, PasswordResetForm,
-AssignLecturerForm, CodResponseForm, ResponseForm, CODCommentForm
+AssignLecturerForm, ResponseForm, CODCommentForm
 )
 
 
@@ -453,8 +452,7 @@ class CodComplaintsView(View):
             department = cod.department
             complaints = Complaint.objects.filter(
                 unit_offering__unit__department=department,
-                assigned_lecturer__isnull=True,
-                resolved=False
+                assigned_lecturer__isnull=True
             ).select_related('student', 'unit_offering__unit')
         except Lecturer.DoesNotExist:
             return redirect('login')
@@ -464,12 +462,6 @@ class CodComplaintsView(View):
         }
         return render(request, 'cod_complaints.html', context)
 
-
-from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib import messages
-from django.views import View
-from .forms import AssignLecturerForm
-from .models import Complaint, Lecturer, UnitOffering
 
 class AssignLecturerView(View):
     def get(self, request, complaint_code):
@@ -553,12 +545,14 @@ class CodRespondView(FormView):
     def form_valid(self, form):
         """Save the response, mark complaint as resolved, and redirect."""
         response = form.save(commit=False)
-        response.complaint = self.complaint
+        response.student = self.complaint.student.reg_no
+        response.unit_offering = self.complaint.unit_offering.unit_code
+        response.academic_year = self.complaint.unit_offering.academic_year.academic_year
         response.save()
 
         # Mark the complaint as resolved
         self.complaint.resolved = True
-        self.complaint.save()
+        self.complaint.delete()
 
         # Success message and redirect
         messages.success(self.request, "Response submitted successfully.")
@@ -616,12 +610,14 @@ class ExamRespondView(FormView):
     def form_valid(self, form):
         """Save the response, mark complaint as resolved, and redirect."""
         response = form.save(commit=False)
-        response.complaint = self.complaint
+        response.student = self.complaint.student.reg_no
+        response.unit_offering = self.complaint.unit_offering.unit_code
+        response.academic_year = self.complaint.unit_offering.academic_year.academic_year
         response.save()
 
         # Mark the complaint as resolved
         self.complaint.resolved = True
-        self.complaint.save()
+        self.complaint.delete()
 
         # Success message and redirect
         messages.success(self.request, "Response submitted successfully.")
@@ -680,12 +676,14 @@ class LecturerRespondView(FormView):
     def form_valid(self, form):
         """Save the response, mark complaint as resolved, and redirect."""
         response = form.save(commit=False)
-        response.complaint = self.complaint
+        response.student = self.complaint.student.reg_no
+        response.unit_offering = self.complaint.unit_offering.unit_code
+        response.academic_year = self.complaint.unit_offering.academic_year.academic_year
         response.save()
 
         # Mark the complaint as resolved
         self.complaint.resolved = True
-        self.complaint.save()
+        self.complaint.delete()
 
         # Success message and redirect
         messages.success(self.request, "Response submitted successfully.")
@@ -719,7 +717,7 @@ class CODApproveResponseView(View):
     form_class = CODCommentForm
     template_name = 'cod_approve_response.html'
 
-    def get(self, request, complaint_code):
+    def get(self, request, response_id):
         # Ensure the user is logged in and is a COD
         username = request.session.get('username')
         if not username:
@@ -728,7 +726,7 @@ class CODApproveResponseView(View):
         lecturer = Lecturer.objects.filter(username=username).first()
         if lecturer and lecturer.role == 'COD':
             # Get the response related to the complaint code
-            response = Response.objects.filter(complaint__complaint_code=complaint_code).first()
+            response = Response.objects.filter(response_id=response_id).first()
             if response and not response.approved_by_cod:
                 form = self.form_class()
                 return render(request, self.template_name, {'form': form, 'response': response})
@@ -738,7 +736,7 @@ class CODApproveResponseView(View):
         messages.error(request, "You do not have permission to access this page.")
         return redirect('login')
 
-    def post(self, request, complaint_code):
+    def post(self, request, response_id):
         # Ensure the user is logged in and is a COD
         username = request.session.get('username')
         if not username:
@@ -746,8 +744,8 @@ class CODApproveResponseView(View):
 
         lecturer = Lecturer.objects.filter(username=username).first()
         if lecturer and lecturer.role == 'COD':
-            # Get the response related to the complaint code
-            response = Response.objects.filter(complaint__complaint_code=complaint_code).first()
+            # Get the response related to the response id
+            response = Response.objects.filter(response_id=response_id).first()
             if response and not response.approved_by_cod:
                 form = self.form_class(request.POST)
                 if form.is_valid():
@@ -765,16 +763,22 @@ class CODApproveResponseView(View):
         messages.error(request, "You do not have permission to access this page.")
         return redirect('login')
 
-class ExamOfficerApprovedResponsesView(LoginRequiredMixin, ListView):
+class ExamOfficerApprovedResponsesView(ListView):
     model = Response
     template_name = 'approved_responses.html'
-    context_object_name = 'responses'
+    context_object_name = 'responses_by_department'
 
     def get_queryset(self):
-        # Get the lecturer based on the logged-in user
-        username = self.request.user.username
+        # Check if the username is in the session
+        username = self.request.session.get('username')
+        
+        if not username:
+            # If username is not in session, redirect to login
+            return redirect('login')
+        
         try:
-            lecturer = Lecturer.objects.get(username=username)
+            # Retrieve the lecturer using the username from session
+            lecturer = Lecturer.objects.filter(username=username).first()
         except Lecturer.DoesNotExist:
             raise Http404("Lecturer not found")
         
@@ -782,60 +786,37 @@ class ExamOfficerApprovedResponsesView(LoginRequiredMixin, ListView):
         if lecturer.role != 'Exam Officer':
             raise Http404("You are not authorized to access this page.")
         
-        # Retrieve all responses approved by COD for the lecturer's school
-        school = lecturer.department.school
-        return Response.objects.filter(
-            complaint__unit_offering__unit__department__school=school,
-            approved_by_cod=True
-        )
+        # Retrieve the department and the school the Exam Officer belongs to
+        department = lecturer.department
+        school = department.school
 
-class DeleteResponseConfirmationView(LoginRequiredMixin, DetailView):
+        # Retrieve all departments in the same school
+        departments_in_school = Department.objects.filter(school=school)
+
+        # Prepare a dictionary to store the responses grouped by department
+        responses_by_department = {}
+
+        for department in departments_in_school:
+            responses_by_department[department] = Response.objects.filter(
+                unit_offering__unit__department=department,
+                approved_by_cod=True
+            )
+
+        return responses_by_department
+
+class DeleteResponseView(DeleteView):
     model = Response
-    template_name = 'confirma_delete_response.html'
-    context_object_name = 'response'
+    template_name = 'delete_response.html'
+    success_url = reverse_lazy('approved-responses')
 
-    def get_object(self):
-        # Get the response to be deleted
-        response_id = self.kwargs['response_id']
-        response = get_object_or_404(Response, id=response_id)
-
-        # Ensure the logged-in user is an Exam Officer
-        username = self.request.user.username
-        lecturer = Lecturer.objects.get(username=username)
-
-        if lecturer.role != 'Exam Officer':
-            raise Http404("You are not authorized to access this page.")
-        
-        return response
-
-    def post(self, request, *args, **kwargs):
-        # Archive the complaint and response before deletion
-        response = self.get_object()
-        complaint = response.complaint
-        lecturer = Lecturer.objects.get(username=request.user.username)
-        
-        archived_complaint = ArchivedComplaint.objects.create(
-            complaint_code=complaint.complaint_code,
-            student=complaint.student,
-            unit_offering=complaint.unit_offering,
-            resolved_by=lecturer,
-        )
-        
-        ArchivedResponse.objects.create(
-            archivedcomplaint=archived_complaint,
-            cat_mark=response.cat_mark,
-            exam_mark=response.exam_mark,
-            response_date=response.response_date,
-            comment_by_cod=response.comment_by_cod,
-            approved_by_cod=response.approved_by_cod,
-        )
-        
-        # Delete the original complaint and response
-        complaint.delete()
-        response.delete()
-        
-        messages.success(request, "Response and complaint archived and deleted successfully.")
-        return redirect('approved_responses')
+    def delete(self, request, *args, **kwargs):
+        try:
+            response = super().delete(request, *args, **kwargs)
+            messages.success(request, "Response deleted successfully.")
+            return response
+        except Exception as e:
+            messages.error(request, "Failed to delete response.")
+            return redirect(self.success_url)
  
 class LoadNominalRollView(View):
     def get(self, request):
