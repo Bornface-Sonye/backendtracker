@@ -2,11 +2,11 @@
 
 {% block content %}
     <h1>Confirm Deletion of Response</h1>
-    <p>Are you sure you want to delete the response for complaint code {{ response.complaint.complaint_code }}?</p>
+    <p>Are you sure you want to delete the response for student {{ response.student.reg_no }}?</p>
     <form method="POST">
         {% csrf_token %}
         <button type="submit">Yes, Delete</button>
-        <a href="{% url 'approved_responses' %}">Cancel</a>
+        <a href="{% url 'approved-responses' %}">Cancel</a>
     </form>
 {% endblock %}
 

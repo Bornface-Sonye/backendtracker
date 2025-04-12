@@ -1,10 +1,9 @@
 {% extends 'cod_base_dashboard.html' %}
 {% block content %}
-<h3 style="font-family: Arial, sans-serif; color: #2c3e50;">Approve Response: {{ response.complaint.complaint_code }}</h3>
 
 <p style="font-family: Arial, sans-serif; color: #34495e;">
-    <strong>Student:</strong> {{ response.complaint.student.reg_no }}<br>
-    <strong>Unit Code:</strong> {{ response.complaint.unit_offering.unit.unit_code }}<br>
+    <strong>Student:</strong> {{ response.student.reg_no }}<br>
+    <strong>Unit Code:</strong> {{ response.unit_offering.unit.unit_code }}<br>
     <strong>Response Date:</strong> {{ response.response_date }}
 </p>
 

@@ -2,32 +2,49 @@
 
 {% block content %}
     <h1 style="font-family: Arial, sans-serif; color: #333; text-align: center;">COD Approved Responses</h1>
-
+    <!-- Message display block -->
+{% if messages %}
+<div style="width: 80%; margin: 0 auto 20px;">
+    {% for message in messages %}
+        <div style="
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            color: {% if message.tags == 'error' %}#721c24{% else %}#155724{% endif %};
+            background-color: {% if message.tags == 'error' %}#f8d7da{% else %}#d4edda{% endif %};
+            border: 1px solid {% if message.tags == 'error' %}#f5c6cb{% else %}#c3e6cb{% endif %};
+            font-family: Arial, sans-serif;
+        ">
+            {{ message }}
+        </div>
+    {% endfor %}
+</div>
+{% endif %}
     {% for department, responses in responses_by_department.items %}
         <h2 style="font-family: Arial, sans-serif; color: #4CAF50; padding: 10px 0;">{{ department.department_name }}</h2>
         <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-family: Arial, sans-serif;">
             <thead style="background-color: #4CAF50; color: white; text-align: left;">
                 <tr>
-                    <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">Complaint Code</th>
                     <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">Student</th>
                     <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">Unit</th>
-                    <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">Response Date</th>
-                    <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">Marks CAT</th>
-                    <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">Marks Exam</th>
+                    <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">Academic Year</th>
+                    <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">CAT</th>
+                    <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">Exam</th>
                     <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">Marks (CAT + Exam)</th>
+                    <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">Response Date</th>
                     <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 {% for response in responses %}
                     <tr style="background-color: #f9f9f9; border-bottom: 1px solid #ddd;">
-                        <td style="padding: 12px; text-align: center;">{{ response.complaint.complaint_code }}</td>
-                        <td style="padding: 12px; text-align: center;">{{ response.complaint.student.first_name }} {{ response.complaint.student.last_name }}</td>
-                        <td style="padding: 12px; text-align: center;">{{ response.complaint.unit_offering.unit.unit_name }}</td>
-                        <td style="padding: 12px; text-align: center;">{{ response.response_date }}</td>
+                        <td style="padding: 12px; text-align: center;">{{ response.student.reg_no }}</td>
+                        <td style="padding: 12px; text-align: center;">{{ response.unit_offering.unit.unit_code }}</td>
+                        <td style="padding: 12px; text-align: center;">{{ response.academic_year }}</td>
                         <td style="padding: 12px; text-align: center;">{{ response.cat_mark }}</td>
                         <td style="padding: 12px; text-align: center;">{{ response.exam_mark }}</td>
                         <td style="padding: 12px; text-align: center;">{{ response.cat_mark }} + {{ response.exam_mark }}</td>
+                        <td style="padding: 12px; text-align: center;">{{ response.response_date }}</td>
                         <td style="padding: 12px; text-align: center;">
                             <a href="{% url 'delete-response' response.pk %}" style="color: red; text-decoration: none; font-weight: bold;">Delete</a>
                         </td>
