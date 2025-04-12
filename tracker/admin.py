@@ -109,3 +109,8 @@ class PasswordResetTokenAdmin(admin.ModelAdmin):
     list_display = ('username', 'token')
     list_filter = ('username', 'token',)
     search_fields = ('username', 'token', 'created_at')
+@admin.register(ArchivedResponse)
+class ArchivedResponseAdmin(admin.ModelAdmin):
+    list_display = ('archivedcomplaint', 'cat_mark', 'exam_mark', 'comment_by_cod', 'approved_by_cod')
+    list_filter = ('approved_by_cod',)
+    search_fields = ('approved_by_cod',)

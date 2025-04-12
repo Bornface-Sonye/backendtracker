@@ -266,7 +266,7 @@ class ArchivedResponse(models.Model):
     approved_by_cod = models.BooleanField(default=False)
     
     def __str__(self):
-        return f"{self.complaint} - {self.comment_by_cod} - {self.approved_by_cod}"
+        return f"{self.archivedcomplaint} - {self.comment_by_cod} - {self.approved_by_cod}"
 
 class System_User(models.Model):
     username = models.CharField(primary_key=True, unique=True, max_length=50, help_text="Enter a valid Username")
