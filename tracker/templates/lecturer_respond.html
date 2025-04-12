@@ -1,4 +1,4 @@
-{% extends 'exam_base_dashboard.html' %}
+{% extends 'lecturer_base_dashboard.html' %}
 {% block content %}
 <h3 style="font-family: Arial, sans-serif; color: #2c3e50;">Respond to Complaint: {{ complaint.complaint_code }}</h3>
 
@@ -13,14 +13,14 @@
 <form method="post" style="font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; background-color: #ecf0f1; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
     {% csrf_token %}
     
-    <div class="form-group" style="margin-bottom: 20px;">
+    <div class="form-group" id="cat_mark_group" style="margin-bottom: 20px;">
         <label for="cat_mark" style="font-size: 16px; color: #2c3e50;">Enter CAT Mark:</label>
-        <input type="number" id="cat_mark" name="cat_mark" class="form-control" style="padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 5px; width: 100%; background-color: #fff;" required>
+        <input type="number" id="cat_mark" name="cat_mark" class="form-control" style="padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 5px; width: 100%; background-color: #fff;" {% if complaint.missing_type == 'EXAM' %} disabled {% endif %}>
     </div>
 
-    <div class="form-group" style="margin-bottom: 20px;">
+    <div class="form-group" id="exam_mark_group" style="margin-bottom: 20px;">
         <label for="exam_mark" style="font-size: 16px; color: #2c3e50;">Enter Exam Mark:</label>
-        <input type="number" id="exam_mark" name="exam_mark" class="form-control" style="padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 5px; width: 100%; background-color: #fff;" required>
+        <input type="number" id="exam_mark" name="exam_mark" class="form-control" style="padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 5px; width: 100%; background-color: #fff;" {% if complaint.missing_type == 'CAT' %} disabled {% endif %}>
     </div>
 
     <button type="submit" class="btn btn-primary" style="background-color: #3498db; color: white; padding: 10px 20px; border: none; font-size: 18px; border-radius: 5px; cursor: pointer;">
@@ -35,4 +35,22 @@
         {% endfor %}
     </div>
 {% endif %}
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        var missingType = "{{ complaint.missing_type }}";  // 'CAT', 'EXAM', or 'BOTH'
+
+        // Hide/show the appropriate fields based on missing type
+        if (missingType === "CAT") {
+            document.getElementById("cat_mark_group").style.display = "block";
+            document.getElementById("exam_mark_group").style.display = "none";
+        } else if (missingType === "EXAM") {
+            document.getElementById("cat_mark_group").style.display = "none";
+            document.getElementById("exam_mark_group").style.display = "block";
+        } else {
+            document.getElementById("cat_mark_group").style.display = "block";
+            document.getElementById("exam_mark_group").style.display = "block";
+        }
+    });
+</script>
 {% endblock %}

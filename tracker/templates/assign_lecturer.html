@@ -1,11 +1,20 @@
 {% extends 'cod_base_dashboard.html' %}
 
 {% block content %}
-<h3 style="text-align: center; margin-bottom: 20px;">Assign Lecturer to Complaint {{ complaint.complaint_code }}</h3>
 
 <form method="post" style="max-width: 600px; margin: auto; background: #f9f9f9; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
     {% csrf_token %}
+    
+    <!-- Displaying unit, student, academic year, and registration number details -->
+    <div style="margin-bottom: 15px; font-family: Arial, sans-serif;">
+        <strong>Unit:</strong> {{ unit.unit_name }}<br>
+        <strong>Student:</strong> {{ student.first_name }} {{ student.last_name }}<br>
+        <strong>Registration Number:</strong> {{ student.reg_no }}<br>
+        <strong>Academic Year:</strong> {{ academic_year.academic_year }}<br>
+    </div>
+
     {{ form.as_p }}
+
     <div style="text-align: center; margin-top: 20px;">
         <button type="submit" style="padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">
             Assign

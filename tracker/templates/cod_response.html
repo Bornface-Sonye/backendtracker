@@ -3,13 +3,50 @@
 {% block content %}
 <h3 style="text-align: center; margin-bottom: 20px;">Respond to Complaint {{ complaint.complaint_code }}</h3>
 
+<!-- Display student info at the top -->
+<div style="text-align: center; margin-bottom: 20px;">
+    <p><strong>Student Registration No:</strong> {{ student_reg_no }}</p>
+    <p><strong>Unit Code:</strong> {{ unit_code }}</p>
+    <p><strong>Academic Year:</strong> {{ academic_year }}</p>
+</div>
+
 <form method="post" style="max-width: 600px; margin: auto; background: #f9f9f9; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
     {% csrf_token %}
-    {{ form.as_p }}
+    
+    <!-- Render form fields conditionally based on missing_type -->
+    <div class="form-group" id="cat_mark_group" style="margin-bottom: 20px;">
+        <label for="cat_mark" style="font-size: 16px; color: #2c3e50;">Enter CAT Mark:</label>
+        {{ form.cat_mark }}
+    </div>
+
+    <div class="form-group" id="exam_mark_group" style="margin-bottom: 20px;">
+        <label for="exam_mark" style="font-size: 16px; color: #2c3e50;">Enter Exam Mark:</label>
+        {{ form.exam_mark }}
+    </div>
+
     <div style="text-align: center; margin-top: 20px;">
         <button type="submit" style="padding: 10px 20px; background-color: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer;">
             Submit Response
         </button>
     </div>
 </form>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        var missingType = "{{ missing_type }}";  // 'CAT', 'EXAM', or 'BOTH'
+
+        // Hide/show the appropriate fields based on missing type
+        if (missingType === "CAT") {
+            document.getElementById("cat_mark_group").style.display = "block";
+            document.getElementById("exam_mark_group").style.display = "none";
+        } else if (missingType === "EXAM") {
+            document.getElementById("cat_mark_group").style.display = "none";
+            document.getElementById("exam_mark_group").style.display = "block";
+        } else {
+            document.getElementById("cat_mark_group").style.display = "block";
+            document.getElementById("exam_mark_group").style.display = "block";
+        }
+    });
+</script>
+
 {% endblock %}

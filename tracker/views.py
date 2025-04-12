@@ -317,9 +317,9 @@ class COD_DashboardView(View):
         unit_ids = lecturer_unit_offerings.values_list('unit', flat=True).distinct()
         total_units_for_lecturer = unit_ids.count()
 
-        # Complaints related to those unit offerings
+        # Complaints related to those unit offerings        
         related_complaints_count = Complaint.objects.filter(
-            unit_offering__in=lecturer_unit_offerings
+            unit_offering__unit__department=department
         ).count()
 
         # List of courses in this department
@@ -371,9 +371,7 @@ class Exam_DashboardView(View):
         total_units_for_lecturer = unit_ids.count()
 
         # Complaints related to those unit offerings
-        related_complaints_count = Complaint.objects.filter(
-            unit_offering__in=lecturer_unit_offerings
-        ).count()
+        related_complaints_count = Complaint.objects.filter(assigned_lecturer=lecturer).count()
 
         # List of courses in this department
         courses = Course.objects.filter(program__department=department)
@@ -423,10 +421,9 @@ class Lecturer_DashboardView(View):
         unit_ids = lecturer_unit_offerings.values_list('unit', flat=True).distinct()
         total_units_for_lecturer = unit_ids.count()
 
+        
         # Complaints related to those unit offerings
-        related_complaints_count = Complaint.objects.filter(
-            unit_offering__in=lecturer_unit_offerings
-        ).count()
+        related_complaints_count = Complaint.objects.filter(assigned_lecturer=lecturer).count()
 
         # List of courses in this department
         courses = Course.objects.filter(program__department=department)
@@ -454,9 +451,11 @@ class CodComplaintsView(View):
         try:
             cod = Lecturer.objects.get(username=username, role='COD')
             department = cod.department
-            complaints = Complaint.objects.filter(unit_offering__unit__department=department, resolved=False)\
-                                          .select_related('student', 'unit_offering__unit')
-
+            complaints = Complaint.objects.filter(
+                unit_offering__unit__department=department,
+                assigned_lecturer__isnull=True,
+                resolved=False
+            ).select_related('student', 'unit_offering__unit')
         except Lecturer.DoesNotExist:
             return redirect('login')
 
@@ -464,6 +463,13 @@ class CodComplaintsView(View):
             'complaints': complaints
         }
         return render(request, 'cod_complaints.html', context)
+
+
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib import messages
+from django.views import View
+from .forms import AssignLecturerForm
+from .models import Complaint, Lecturer, UnitOffering
 
 class AssignLecturerView(View):
     def get(self, request, complaint_code):
@@ -473,9 +479,23 @@ class AssignLecturerView(View):
 
         complaint = get_object_or_404(Complaint, complaint_code=complaint_code)
         cod = get_object_or_404(Lecturer, username=username, role='COD')
+
+        # Query unit, student, and academic year details
+        unit_offering = complaint.unit_offering
+        unit = unit_offering.unit
+        student = complaint.student
+        academic_year = unit_offering.academic_year
+
+        # Pass the necessary information to the template
         form = AssignLecturerForm(department=cod.department)
 
-        return render(request, 'assign_lecturer.html', {'form': form, 'complaint': complaint})
+        return render(request, 'assign_lecturer.html', {
+            'form': form,
+            'complaint': complaint,
+            'unit': unit,
+            'student': student,
+            'academic_year': academic_year,
+        })
 
     def post(self, request, complaint_code):
         username = request.session.get('username')
@@ -489,11 +509,16 @@ class AssignLecturerView(View):
         if form.is_valid():
             complaint.assigned_lecturer = form.cleaned_data['lecturer']
             complaint.save()
+            messages.success(request, "Lecturer successfully assigned to the complaint.")
             return redirect('cod-complaints')
 
-        return render(request, 'assign_lecturer.html', {'form': form, 'complaint': complaint})
+        return render(request, 'assign_lecturer.html', {
+            'form': form,
+            'complaint': complaint
+        })
+
 class CodRespondView(FormView):
-    template_name = 'cod_respond.html'
+    template_name = 'cod_response.html'
     form_class = ResponseForm
 
     def dispatch(self, request, *args, **kwargs):
@@ -509,10 +534,21 @@ class CodRespondView(FormView):
         """Prepare initial form data based on the missing type of the complaint."""
         initial = super().get_initial()
         if self.complaint.missing_type == 'CAT':
-            initial['exam_mark'] = None
+            initial['exam_mark'] = None  # Set exam mark to None if missing type is CAT
         elif self.complaint.missing_type == 'EXAM':
-            initial['cat_mark'] = None
+            initial['cat_mark'] = None  # Set CAT mark to None if missing type is EXAM
+        elif self.complaint.missing_type == 'BOTH':
+            initial['cat_mark'] = None  # Set both to None if missing type is BOTH
+            initial['exam_mark'] = None
         return initial
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['student_reg_no'] = self.complaint.student.reg_no
+        context['unit_code'] = self.complaint.unit_offering.unit_code
+        context['academic_year'] = self.complaint.unit_offering.academic_year.academic_year
+        context['missing_type'] = self.complaint.missing_type  # Pass missing_type to template
+        return context
 
     def form_valid(self, form):
         """Save the response, mark complaint as resolved, and redirect."""
@@ -525,13 +561,13 @@ class CodRespondView(FormView):
         self.complaint.save()
 
         # Success message and redirect
-        messages.success(self.request, "Response submitted successfully and complaint marked as resolved.")
+        messages.success(self.request, "Response submitted successfully.")
         return redirect('cod-complaints')
 
     def form_invalid(self, form):
         """Handle invalid form submission."""
         messages.error(self.request, "There was an error submitting the response.")
-        return self.render_to_response(self.get_context_data(form=form))   
+        return self.render_to_response(self.get_context_data(form=form))
 
 class ExamComplaintsListView(ListView):
     model = Complaint
@@ -566,10 +602,16 @@ class ExamRespondView(FormView):
         """Prepare initial form data based on the missing type of the complaint."""
         initial = super().get_initial()
         if self.complaint.missing_type == 'CAT':
-            initial['exam_mark'] = None
+            initial['exam_mark'] = None  # Hide EXAM mark
         elif self.complaint.missing_type == 'EXAM':
-            initial['cat_mark'] = None
+            initial['cat_mark'] = None  # Hide CAT mark
         return initial
+
+    def get_context_data(self, **kwargs):
+        """Add complaint and missing type to context for use in template."""
+        context = super().get_context_data(**kwargs)
+        context['complaint'] = self.complaint
+        return context
 
     def form_valid(self, form):
         """Save the response, mark complaint as resolved, and redirect."""
@@ -582,13 +624,14 @@ class ExamRespondView(FormView):
         self.complaint.save()
 
         # Success message and redirect
-        messages.success(self.request, "Response submitted successfully and complaint marked as resolved.")
+        messages.success(self.request, "Response submitted successfully.")
         return redirect('exam-complaints')
 
     def form_invalid(self, form):
         """Handle invalid form submission."""
         messages.error(self.request, "There was an error submitting the response.")
         return self.render_to_response(self.get_context_data(form=form))
+
                                        
 class LecturerComplaintsListView(ListView):
     model = Complaint
@@ -616,17 +659,23 @@ class LecturerRespondView(FormView):
         # Ensure the complaint is not already resolved
         if self.complaint.resolved:
             messages.error(request, "This complaint has already been resolved.")
-            return redirect('lecturer-complaints')
+            return redirect('exam-complaints')
         return super().dispatch(request, *args, **kwargs)
 
     def get_initial(self):
         """Prepare initial form data based on the missing type of the complaint."""
         initial = super().get_initial()
         if self.complaint.missing_type == 'CAT':
-            initial['exam_mark'] = None
+            initial['exam_mark'] = None  # Hide EXAM mark
         elif self.complaint.missing_type == 'EXAM':
-            initial['cat_mark'] = None
+            initial['cat_mark'] = None  # Hide CAT mark
         return initial
+
+    def get_context_data(self, **kwargs):
+        """Add complaint and missing type to context for use in template."""
+        context = super().get_context_data(**kwargs)
+        context['complaint'] = self.complaint
+        return context
 
     def form_valid(self, form):
         """Save the response, mark complaint as resolved, and redirect."""
@@ -639,7 +688,7 @@ class LecturerRespondView(FormView):
         self.complaint.save()
 
         # Success message and redirect
-        messages.success(self.request, "Response submitted successfully and complaint marked as resolved.")
+        messages.success(self.request, "Response submitted successfully.")
         return redirect('lecturer-complaints')
 
     def form_invalid(self, form):
