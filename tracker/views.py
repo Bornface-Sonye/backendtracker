@@ -706,7 +706,7 @@ class CODResponseListView(View):
         lecturer = Lecturer.objects.filter(username=username).first()
         if lecturer and lecturer.role == 'COD':
             # Get responses that are not approved by the COD
-            responses = Response.objects.filter(complaint__unit_offering__unit__department=lecturer.department, approved_by_cod=False)
+            responses = Response.objects.filter(unit_offering__unit__department=lecturer.department, approved_by_cod=False)
             return render(request, self.template_name, {'responses': responses})
         
         messages.error(request, "You do not have permission to access this page.")

@@ -5,9 +5,11 @@
 <table class="table table-bordered" style="font-family: Arial, sans-serif; margin-top: 20px; border: 1px solid #ddd; background-color: #f9f9f9;">
     <thead>
         <tr>
-            <th>Complaint Code</th>
             <th>Student</th>
             <th>Unit</th>
+            <th>Academic Year</th>
+            <th>CAT Mark</th>
+            <th>EXAM Mark</th>
             <th>Response Date</th>
             <th>Action</th>
         </tr>
@@ -15,9 +17,11 @@
     <tbody>
         {% for response in responses %}
         <tr>
-            <td>{{ response.complaint.complaint_code }}</td>
-            <td>{{ response.complaint.student.reg_no }}</td>
-            <td>{{ response.complaint.unit_offering.unit.unit_code }}</td>
+            <td>{{ response.student.reg_no }}</td>
+            <td>{{ response.unit_offering.unit.unit_code }}</td>
+            <td>{{ response.unit_offering.academic_year }}</td>
+            <td>{{ response.cat_mark }}</td>
+            <td>{{ response.exam_mark }}</td>
             <td>{{ response.response_date }}</td>
             <td><a href="{% url 'cod-approve-response' response_id=response.response_id %}" class="btn btn-info">Approve</a></td>
         </tr>

@@ -235,6 +235,7 @@ class Response(models.Model):
     response_id = models.AutoField(primary_key=True, unique=True)
     student = models.ForeignKey(Student, on_delete=models.CASCADE)
     unit_offering = models.ForeignKey(UnitOffering, on_delete=models.CASCADE)
+    academic_year = models.ForeignKey(AcademicYear, on_delete=models.CASCADE)
     cat_mark = models.IntegerField(null=True, blank=True)  # 0-30
     exam_mark = models.IntegerField(null=True, blank=True)  # 0-70
     response_date = models.DateTimeField(auto_now_add=True)
