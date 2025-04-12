@@ -66,6 +66,8 @@ class Semester(models.Model):
     
     def __str__(self):
         return f"{self.semester_number}"
+    def __str__(self):
+        return f"{self.semester_number} - {self.academic_year}"
 
 class YearOfStudy(models.Model):
     study_year = models.PositiveSmallIntegerField(primary_key=True)  # e.g. 1 to 5
