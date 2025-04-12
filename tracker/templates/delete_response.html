@@ -1,12 +1,20 @@
 {% extends 'exam_base_dashboard.html' %}
 
 {% block content %}
-    <h1>Confirm Deletion of Response</h1>
-    <p>Are you sure you want to delete the response for student {{ response.student.reg_no }}?</p>
-    <form method="POST">
-        {% csrf_token %}
-        <button type="submit">Yes, Delete</button>
-        <a href="{% url 'approved-responses' %}">Cancel</a>
-    </form>
+    <div style="font-family: Arial, sans-serif; color: #333; text-align: center; padding: 40px;">
+        <h1 style="color: #c0392b;">Confirm Deletion of Response</h1>
+        <p>Are you sure you want to delete the response for student <strong>{{ response.student.reg_no }}</strong>?</p>
+        
+        <form method="POST" style="margin-top: 20px;">
+            {% csrf_token %}
+            <button type="submit" 
+                    style="background-color: #e74c3c; color: white; border: none; padding: 10px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; margin-right: 10px;">
+                Yes, Delete
+            </button>
+            <a href="{% url 'approved-responses' %}" 
+               style="background-color: #3498db; color: white; text-decoration: none; padding: 10px 20px; font-size: 16px; border-radius: 5px;">
+                Cancel
+            </a>
+        </form>
+    </div>
 {% endblock %}
-

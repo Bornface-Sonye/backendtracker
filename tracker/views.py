@@ -320,6 +320,8 @@ class COD_DashboardView(View):
         related_complaints_count = Complaint.objects.filter(
             unit_offering__unit__department=department
         ).count()
+        related_responses_count = Response.objects.filter(unit_offering__unit__department=lecturer.department, approved_by_cod=False).count()
+
 
         # List of courses in this department
         courses = Course.objects.filter(program__department=department)
@@ -329,6 +331,7 @@ class COD_DashboardView(View):
             'total_lecturers_in_department': total_lecturers_in_department,
             'total_units_for_lecturer': total_units_for_lecturer,
             'related_complaints_count': related_complaints_count,
+            'related_responses_count': related_responses_count,
             'last_name': lecturer.last_name,
             'user': user,
             'units': Unit.objects.filter(pk__in=unit_ids),
