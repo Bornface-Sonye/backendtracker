@@ -132,7 +132,7 @@ class MissingMarkSelectView(View):
             )
 
             messages.success(request, 'Your complaint has been successfully submitted.')
-            return render(request, 'post_complaint.html', {'form': form})
+            return redirect('student')
 
         return render(request, 'post_complaint.html', {'form': form})
     
