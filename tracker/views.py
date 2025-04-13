@@ -820,7 +820,15 @@ class DeleteResponseView(DeleteView):
         except Exception as e:
             messages.error(request, "Failed to delete response.")
             return redirect(self.success_url)
- 
+
+from django.views import View
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from .forms import UploadFileForm
+from .models import Lecturer, Student, Unit, AcademicYear, NominalRoll, Result
+import pandas as pd
+
+
 class LoadNominalRollView(View):
     def get(self, request):
         form = UploadFileForm()
@@ -828,81 +836,55 @@ class LoadNominalRollView(View):
 
     def post(self, request):
         form = UploadFileForm(request.POST, request.FILES)
-        if form.is_valid():
-            file = request.FILES['file']
+        if not form.is_valid():
+            return render(request, 'load_nominal_roll.html', {'form': form})
+
+        file = request.FILES['file']
+        try:
+            data = pd.read_csv(file) if file.name.endswith('.csv') else pd.read_excel(file)
+        except Exception:
+            messages.error(request, 'Invalid file format.')
+            return render(request, 'load_nominal_roll.html', {'form': form})
+
+        username = request.session.get('username')
+        if not username:
+            return redirect('login')
+        lecturer = get_object_or_404(Lecturer, username=username)
+        students = Student.objects.filter(program__department__school=lecturer.department.school)
+
+        preview_data = []
+        for row in data.itertuples():
             try:
-                # Read the CSV or Excel file
-                if file.name.endswith('.csv'):
-                    data = pd.read_csv(file)
-                elif file.name.endswith('.xlsx'):
-                    data = pd.read_excel(file)
-                else:
-                    messages.error(request, 'Invalid file format. Please upload a CSV or Excel file.')
-                    return render(request, 'load_nominal_roll.html', {'form': form})
+                reg_no = row.reg_no
+                unit_code = row.unit_code
+                year = row.academic_year
 
-                # Get the lecturer based on session username
-                username = request.session.get('username')
-                if not username:
-                    return redirect('login')  # Redirect to login if not logged in
-                lecturer = get_object_or_404(Lecturer, username=username)
-                lec_no = lecturer.lec_no
+                student = students.get(reg_no=reg_no)
+                unit = Unit.objects.get(unit_code=unit_code)
+                academic_year = AcademicYear.objects.get(academic_year=year)
 
-                # Get unit codes related to the lecturer
-                related_units = LecturerUnit.objects.filter(lec_no=lec_no).values_list('unit_code', 'academic_year')
-                allowed_unit_codes = {(u[0], u[1]) for u in related_units}  # Set of tuples for fast lookup
+                if not NominalRoll.objects.filter(reg_no=student, unit_code=unit, academic_year=academic_year).exists():
+                    preview_data.append({'reg_no': reg_no, 'unit_code': unit_code, 'academic_year': year})
+            except:
+                continue
 
-                # Initialize error list
-                errors = []
+        request.session['nominal_preview'] = preview_data
+        return render(request, 'load_nominal_roll.html', {'form': form, 'preview_data': preview_data})
 
-                # Process each row
-                for index, row in data.iterrows():
-                    try:
-                        # Retrieve related instances
-                        unit = Unit.objects.get(unit_code=row['unit_code'])
-                        student = Student.objects.get(reg_no=row['reg_no'])
-                        academic_year = AcademicYear.objects.get(academic_year=row['academic_year'])
 
-                        # Check if the unit and academic year are allowed for this lecturer
-                        if (unit.unit_code, academic_year.academic_year) not in allowed_unit_codes:
-                            errors.append(f"Row {index + 1}: Unit {unit.unit_code} not assigned to this lecturer or wrong academic year.")
-                            continue
+class SubmitNominalRollView(View):
+    def post(self, request):
+        preview_data = request.session.pop('nominal_preview', [])
+        for row in preview_data:
+            student = get_object_or_404(Student, reg_no=row['reg_no'])
+            unit = get_object_or_404(Unit, unit_code=row['unit_code'])
+            year = get_object_or_404(AcademicYear, academic_year=row['academic_year'])
 
-                        # Check if entry already exists to avoid duplicates
-                        if NominalRoll.objects.filter(unit_code=unit, reg_no=student, academic_year=academic_year).exists():
-                            errors.append(f"Row {index + 1}: Duplicate entry in nominal roll for unit {unit.unit_code} and student {student.reg_no}.")
-                            continue
+            NominalRoll.objects.create(reg_no=student, unit_code=unit, academic_year=year)
 
-                        # Create NominalRoll instance and save
-                        nominal_roll = NominalRoll(
-                            unit_code=unit,
-                            reg_no=student,
-                            academic_year=academic_year
-                        )
-                        nominal_roll.full_clean()  # Validate model instance
-                        nominal_roll.save()
+        messages.success(request, 'Nominal Roll data saved successfully.')
+        return redirect('load-nominal-roll')
 
-                    except (Unit.DoesNotExist, Student.DoesNotExist, AcademicYear.DoesNotExist):
-                        errors.append(f"Row {index + 1}: Foreign key reference not found (unit, student, or academic year).")
-                    except ValidationError as ve:
-                        errors.append(f"Row {index + 1}: {ve}")
-                    except Exception as e:
-                        errors.append(f"Row {index + 1}: Unexpected error - {str(e)}")
-
-                # Display success or error messages
-                if errors:
-                    for error in errors:
-                        messages.error(request, error)
-                else:
-                    messages.success(request, 'Nominal roll loaded successfully.')
-
-                return render(request, 'load_nominal_roll.html', {'form': form})
-
-            except Exception as e:
-                messages.error(request, f'An error occurred while processing the file: {str(e)}')
-        else:
-            messages.error(request, 'Invalid form submission.')
-
-        return render(request, 'load_nominal_roll.html', {'form': form})
 
 class LoadResultView(View):
     def get(self, request):
@@ -911,91 +893,62 @@ class LoadResultView(View):
 
     def post(self, request):
         form = UploadFileForm(request.POST, request.FILES)
-        if form.is_valid():
-            file = request.FILES['file']
+        if not form.is_valid():
+            return render(request, 'load_result.html', {'form': form})
+
+        file = request.FILES['file']
+        try:
+            data = pd.read_csv(file) if file.name.endswith('.csv') else pd.read_excel(file)
+        except Exception:
+            messages.error(request, 'Invalid file format.')
+            return render(request, 'load_result.html', {'form': form})
+
+        username = request.session.get('username')
+        if not username:
+            return redirect('login')
+        lecturer = get_object_or_404(Lecturer, username=username)
+        students = Student.objects.filter(program__department__school=lecturer.department.school)
+
+        preview_data = []
+        for row in data.itertuples():
             try:
-                # Load file into a DataFrame
-                if file.name.endswith('.csv'):
-                    data = pd.read_csv(file)
-                elif file.name.endswith('.xlsx'):
-                    data = pd.read_excel(file)
-                else:
-                    messages.error(request, 'Invalid file format. Please upload a CSV or Excel file.')
-                    return render(request, 'load_result.html', {'form': form})
+                student = students.get(reg_no=row.reg_no)
+                unit = Unit.objects.get(unit_code=row.unit_code)
+                academic_year = AcademicYear.objects.get(academic_year=row.academic_year)
+                if 0 <= row.cat <= 30 and 0 <= row.exam <= 70:
+                    if not Result.objects.filter(reg_no=student, unit_code=unit, academic_year=academic_year).exists():
+                        preview_data.append({
+                            'reg_no': row.reg_no,
+                            'unit_code': row.unit_code,
+                            'academic_year': row.academic_year,
+                            'cat': row.cat,
+                            'exam': row.exam
+                        })
+            except:
+                continue
 
-                # Get the lecturer's username from session
-                username = request.session.get('username')
-                if not username:
-                    return redirect('login')  # Redirect to login if not logged in
-                lecturer = get_object_or_404(Lecturer, username=username)
-                lec_no = lecturer.lec_no
+        request.session['result_preview'] = preview_data
+        return render(request, 'load_result.html', {'form': form, 'preview_data': preview_data})
 
-                # Get the units and academic years assigned to this lecturer
-                related_units = LecturerUnit.objects.filter(lec_no=lec_no).values_list('unit_code', 'academic_year')
-                allowed_units = {(u[0], u[1]) for u in related_units}  # Set for fast lookup
 
-                errors = []
+class SubmitResultView(View):
+    def post(self, request):
+        preview_data = request.session.pop('result_preview', [])
+        for row in preview_data:
+            student = get_object_or_404(Student, reg_no=row['reg_no'])
+            unit = get_object_or_404(Unit, unit_code=row['unit_code'])
+            year = get_object_or_404(AcademicYear, academic_year=row['academic_year'])
 
-                for index, row in data.iterrows():
-                    try:
-                        # Retrieve foreign key instances
-                        unit = Unit.objects.get(unit_code=row['unit_code'])
-                        student = Student.objects.get(reg_no=row['reg_no'])
-                        academic_year = AcademicYear.objects.get(academic_year=row['academic_year'])
+            Result.objects.create(
+                reg_no=student,
+                unit_code=unit,
+                academic_year=year,
+                cat=row['cat'],
+                exam=row['exam']
+            )
 
-                        # Check if unit and academic year are allowed for this lecturer
-                        if (unit.unit_code, academic_year.academic_year) not in allowed_units:
-                            errors.append(f"Row {index + 1}: Unit {unit.unit_code} is not assigned to this lecturer.")
-                            continue
-
-                        # Check for duplicate entries
-                        if Result.objects.filter(unit_code=unit, reg_no=student, academic_year=academic_year).exists():
-                            errors.append(f"Row {index + 1}: Duplicate result entry for student {student.reg_no} in unit {unit.unit_code}.")
-                            continue
-
-                        # Check CAT and exam marks, ensuring they meet field constraints
-                        cat = row['cat']
-                        exam = row['exam']
-                        if not (0 <= cat <= 30):
-                            errors.append(f"Row {index + 1}: Invalid CAT mark ({cat}). It should be between 0 and 30.")
-                            continue
-                        if not (0 <= exam <= 70):
-                            errors.append(f"Row {index + 1}: Invalid exam mark ({exam}). It should be between 0 and 70.")
-                            continue
-
-                        # Create and validate the Result instance
-                        result = Result(
-                            unit_code=unit,
-                            reg_no=student,
-                            academic_year=academic_year,
-                            cat=cat,
-                            exam=exam
-                        )
-                        result.full_clean()  # Validate the instance
-                        result.save()  # Save to the database
-
-                    except (Unit.DoesNotExist, Student.DoesNotExist, AcademicYear.DoesNotExist):
-                        errors.append(f"Row {index + 1}: Foreign key references not found (unit, student, or academic year).")
-                    except ValidationError as ve:
-                        errors.append(f"Row {index + 1}: Validation error - {ve}")
-                    except Exception as e:
-                        errors.append(f"Row {index + 1}: Unexpected error - {str(e)}")
-
-                # Display error or success messages
-                if errors:
-                    for error in errors:
-                        messages.error(request, error)
-                else:
-                    messages.success(request, 'Results loaded successfully.')
-
-                return render(request, 'load_result.html', {'form': form})
-
-            except Exception as e:
-                messages.error(request, f'An error occurred while processing the file: {str(e)}')
-        else:
-            messages.error(request, 'Invalid form submission.')
-
-        return render(request, 'load_result.html', {'form': form})
+        messages.success(request, 'Result data saved successfully.')
+        return redirect('load-result')
 
 class ResultListView(ListView):
     model = Result
@@ -1003,24 +956,27 @@ class ResultListView(ListView):
     context_object_name = 'results'
 
     def get_queryset(self):
-        # Get lecturer's lec_no from session username
         username = self.request.session.get('username')
         lecturer = get_object_or_404(Lecturer, username=username)
+        employee_no = lecturer.employee_no
 
-        # Get lec_no associated with the lecturer
-        lec_no = lecturer.lec_no
-        lec_units = LecturerUnit.objects.filter(lec_no=lec_no)
+        # Get units and academic years assigned via UnitOffering
+        offerings = UnitOffering.objects.filter(lecturer__employee_no=employee_no).select_related('unit', 'academic_year')
+        allowed_units = {
+            (offering.unit.unit_code, offering.academic_year.academic_year)
+            for offering in offerings
+        }
 
-        # Base queryset filtered by lecturer's units
+        # Base queryset: results linked to units & years from offerings
         queryset = Result.objects.filter(
-            unit_code__in=[unit.unit_code for unit in lec_units]
+            unit_code__unit_code__in=[u for u, _ in allowed_units],
+            academic_year__academic_year__in=[y for _, y in allowed_units]
         )
 
-        # Filter by academic year, unit code, and reg_no if provided in request
         academic_year = self.request.GET.get('academic_year')
         unit_code = self.request.GET.get('unit_code')
         reg_no = self.request.GET.get('reg_no')
-        sort_field = self.request.GET.get('sort', 'reg_no')  # Default sort by reg_no
+        sort_field = self.request.GET.get('sort', 'reg_no')
 
         if academic_year:
             queryset = queryset.filter(academic_year__academic_year=academic_year)
@@ -1029,11 +985,11 @@ class ResultListView(ListView):
         if reg_no:
             queryset = queryset.filter(reg_no=reg_no)
 
-        return queryset.order_by(sort_field)  # Apply sorting
+        return queryset.order_by(sort_field)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['academic_years'] = AcademicYear.objects.all()  # To populate filter options
+        context['academic_years'] = AcademicYear.objects.all()
         return context
 
 class NominalRollListView(ListView):
@@ -1044,12 +1000,19 @@ class NominalRollListView(ListView):
     def get_queryset(self):
         username = self.request.session.get('username')
         lecturer = get_object_or_404(Lecturer, username=username)
+        employee_no = lecturer.employee_no
 
-        # Get lec_no associated with the lecturer
-        lec_no = lecturer.lec_no
-        lec_units = LecturerUnit.objects.filter(lec_no=lec_no)
+        # Get units and academic years assigned via UnitOffering
+        offerings = UnitOffering.objects.filter(lecturer__employee_no=employee_no).select_related('unit', 'academic_year')
+        allowed_units = {
+            (offering.unit.unit_code, offering.academic_year.academic_year)
+            for offering in offerings
+        }
+
+        # Base queryset
         queryset = NominalRoll.objects.filter(
-            unit_code__in=[unit.unit_code for unit in lec_units]
+            unit_code__unit_code__in=[u for u, _ in allowed_units],
+            academic_year__academic_year__in=[y for _, y in allowed_units]
         )
 
         academic_year = self.request.GET.get('academic_year')
@@ -1062,7 +1025,7 @@ class NominalRollListView(ListView):
         if unit_code:
             queryset = queryset.filter(unit_code__unit_code=unit_code)
         if reg_no:
-            queryset = queryset.filter(reg_no=reg_no, unit_code=unit_code, academic_year=academic_year)
+            queryset = queryset.filter(reg_no=reg_no, unit_code__unit_code=unit_code, academic_year__academic_year=academic_year)
 
         return queryset.order_by(sort_field)
 
@@ -1070,207 +1033,34 @@ class NominalRollListView(ListView):
         context = super().get_context_data(**kwargs)
         context['academic_years'] = AcademicYear.objects.all()
         return context
-
-class Exam_LoadNominalRollView(View):
-    def get(self, request):
-        form = UploadFileForm()
-        return render(request, 'exam_load_nominal_roll.html', {'form': form})
-
-    def post(self, request):
-        form = UploadFileForm(request.POST, request.FILES)
-        if form.is_valid():
-            file = request.FILES['file']
-            try:
-                # Read the CSV or Excel file
-                if file.name.endswith('.csv'):
-                    data = pd.read_csv(file)
-                elif file.name.endswith('.xlsx'):
-                    data = pd.read_excel(file)
-                else:
-                    messages.error(request, 'Invalid file format. Please upload a CSV or Excel file.')
-                    return render(request, 'exam_load_nominal_roll.html', {'form': form})
-
-                # Get the lecturer based on session username
-                username = request.session.get('username')
-                if not username:
-                    return redirect('login')  # Redirect to login if not logged in
-                lecturer = get_object_or_404(Lecturer, username=username)
-                lec_no = lecturer.lec_no
-
-                # Get unit codes related to the lecturer
-                related_units = LecturerUnit.objects.filter(lec_no=lec_no).values_list('unit_code', 'academic_year')
-                allowed_unit_codes = {(u[0], u[1]) for u in related_units}  # Set of tuples for fast lookup
-
-                # Initialize error list
-                errors = []
-
-                # Process each row
-                for index, row in data.iterrows():
-                    try:
-                        # Retrieve related instances
-                        unit = Unit.objects.get(unit_code=row['unit_code'])
-                        student = Student.objects.get(reg_no=row['reg_no'])
-                        academic_year = AcademicYear.objects.get(academic_year=row['academic_year'])
-
-                        # Check if the unit and academic year are allowed for this lecturer
-                        if (unit.unit_code, academic_year.academic_year) not in allowed_unit_codes:
-                            errors.append(f"Row {index + 1}: Unit {unit.unit_code} not assigned to this lecturer or wrong academic year.")
-                            continue
-
-                        # Check if entry already exists to avoid duplicates
-                        if NominalRoll.objects.filter(unit_code=unit, reg_no=student, academic_year=academic_year).exists():
-                            errors.append(f"Row {index + 1}: Duplicate entry in nominal roll for unit {unit.unit_code} and student {student.reg_no}.")
-                            continue
-
-                        # Create NominalRoll instance and save
-                        nominal_roll = NominalRoll(
-                            unit_code=unit,
-                            reg_no=student,
-                            academic_year=academic_year
-                        )
-                        nominal_roll.full_clean()  # Validate model instance
-                        nominal_roll.save()
-
-                    except (Unit.DoesNotExist, Student.DoesNotExist, AcademicYear.DoesNotExist):
-                        errors.append(f"Row {index + 1}: Foreign key reference not found (unit, student, or academic year).")
-                    except ValidationError as ve:
-                        errors.append(f"Row {index + 1}: {ve}")
-                    except Exception as e:
-                        errors.append(f"Row {index + 1}: Unexpected error - {str(e)}")
-
-                # Display success or error messages
-                if errors:
-                    for error in errors:
-                        messages.error(request, error)
-                else:
-                    messages.success(request, 'Nominal roll loaded successfully.')
-
-                return render(request, 'exam_load_nominal_roll.html', {'form': form})
-
-            except Exception as e:
-                messages.error(request, f'An error occurred while processing the file: {str(e)}')
-        else:
-            messages.error(request, 'Invalid form submission.')
-
-        return render(request, 'exam_load_nominal_roll.html', {'form': form})
-
-class Exam_LoadResultView(View):
-    def get(self, request):
-        form = UploadFileForm()
-        return render(request, 'exam_load_result.html', {'form': form})
-
-    def post(self, request):
-        form = UploadFileForm(request.POST, request.FILES)
-        if form.is_valid():
-            file = request.FILES['file']
-            try:
-                # Load file into a DataFrame
-                if file.name.endswith('.csv'):
-                    data = pd.read_csv(file)
-                elif file.name.endswith('.xlsx'):
-                    data = pd.read_excel(file)
-                else:
-                    messages.error(request, 'Invalid file format. Please upload a CSV or Excel file.')
-                    return render(request, 'exam_load_result.html', {'form': form})
-
-                # Get the lecturer's username from session
-                username = request.session.get('username')
-                if not username:
-                    return redirect('login')  # Redirect to login if not logged in
-                lecturer = get_object_or_404(Lecturer, username=username)
-                lec_no = lecturer.lec_no
-
-                # Get the units and academic years assigned to this lecturer
-                related_units = LecturerUnit.objects.filter(lec_no=lec_no).values_list('unit_code', 'academic_year')
-                allowed_units = {(u[0], u[1]) for u in related_units}  # Set for fast lookup
-
-                errors = []
-
-                for index, row in data.iterrows():
-                    try:
-                        # Retrieve foreign key instances
-                        unit = Unit.objects.get(unit_code=row['unit_code'])
-                        student = Student.objects.get(reg_no=row['reg_no'])
-                        academic_year = AcademicYear.objects.get(academic_year=row['academic_year'])
-
-                        # Check if unit and academic year are allowed for this lecturer
-                        if (unit.unit_code, academic_year.academic_year) not in allowed_units:
-                            errors.append(f"Row {index + 1}: Unit {unit.unit_code} is not assigned to this lecturer.")
-                            continue
-
-                        # Check for duplicate entries
-                        if Result.objects.filter(unit_code=unit, reg_no=student, academic_year=academic_year).exists():
-                            errors.append(f"Row {index + 1}: Duplicate result entry for student {student.reg_no} in unit {unit.unit_code}.")
-                            continue
-
-                        # Check CAT and exam marks, ensuring they meet field constraints
-                        cat = row['cat']
-                        exam = row['exam']
-                        if not (0 <= cat <= 30):
-                            errors.append(f"Row {index + 1}: Invalid CAT mark ({cat}). It should be between 0 and 30.")
-                            continue
-                        if not (0 <= exam <= 70):
-                            errors.append(f"Row {index + 1}: Invalid exam mark ({exam}). It should be between 0 and 70.")
-                            continue
-
-                        # Create and validate the Result instance
-                        result = Result(
-                            unit_code=unit,
-                            reg_no=student,
-                            academic_year=academic_year,
-                            cat=cat,
-                            exam=exam
-                        )
-                        result.full_clean()  # Validate the instance
-                        result.save()  # Save to the database
-
-                    except (Unit.DoesNotExist, Student.DoesNotExist, AcademicYear.DoesNotExist):
-                        errors.append(f"Row {index + 1}: Foreign key references not found (unit, student, or academic year).")
-                    except ValidationError as ve:
-                        errors.append(f"Row {index + 1}: Validation error - {ve}")
-                    except Exception as e:
-                        errors.append(f"Row {index + 1}: Unexpected error - {str(e)}")
-
-                # Display error or success messages
-                if errors:
-                    for error in errors:
-                        messages.error(request, error)
-                else:
-                    messages.success(request, 'Results loaded successfully.')
-
-                return render(request, 'exam_load_result.html', {'form': form})
-
-            except Exception as e:
-                messages.error(request, f'An error occurred while processing the file: {str(e)}')
-        else:
-            messages.error(request, 'Invalid form submission.')
-
-        return render(request, 'exam_load_result.html', {'form': form})
-
+    
 class Exam_ResultListView(ListView):
     model = Result
     template_name = 'exam_result_list.html'
     context_object_name = 'results'
 
     def get_queryset(self):
-        # Get lecturer's lec_no from session username
         username = self.request.session.get('username')
         lecturer = get_object_or_404(Lecturer, username=username)
+        employee_no = lecturer.employee_no
 
-        # Get lec_no associated with the lecturer
-        lec_no = lecturer.lec_no
-        lec_units = LecturerUnit.objects.filter(lec_no=lec_no)
+        # Get units and academic years assigned via UnitOffering
+        offerings = UnitOffering.objects.filter(lecturer__employee_no=employee_no).select_related('unit', 'academic_year')
+        allowed_units = {
+            (offering.unit.unit_code, offering.academic_year.academic_year)
+            for offering in offerings
+        }
 
-        # Base queryset filtered by lecturer's units
+        # Base queryset: results linked to units & years from offerings
         queryset = Result.objects.filter(
-            unit_code__in=[unit.unit_code for unit in lec_units]
+            unit_code__unit_code__in=[u for u, _ in allowed_units],
+            academic_year__academic_year__in=[y for _, y in allowed_units]
         )
 
-        # Filter by academic year, unit code, and reg_no if provided in request
         academic_year = self.request.GET.get('academic_year')
         unit_code = self.request.GET.get('unit_code')
         reg_no = self.request.GET.get('reg_no')
-        sort_field = self.request.GET.get('sort', 'reg_no')  # Default sort by reg_no
+        sort_field = self.request.GET.get('sort', 'reg_no')
 
         if academic_year:
             queryset = queryset.filter(academic_year__academic_year=academic_year)
@@ -1279,11 +1069,11 @@ class Exam_ResultListView(ListView):
         if reg_no:
             queryset = queryset.filter(reg_no=reg_no)
 
-        return queryset.order_by(sort_field)  # Apply sorting
+        return queryset.order_by(sort_field)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['academic_years'] = AcademicYear.objects.all()  # To populate filter options
+        context['academic_years'] = AcademicYear.objects.all()
         return context
 
 class Exam_NominalRollListView(ListView):
@@ -1294,12 +1084,19 @@ class Exam_NominalRollListView(ListView):
     def get_queryset(self):
         username = self.request.session.get('username')
         lecturer = get_object_or_404(Lecturer, username=username)
+        employee_no = lecturer.employee_no
 
-        # Get lec_no associated with the lecturer
-        lec_no = lecturer.lec_no
-        lec_units = LecturerUnit.objects.filter(lec_no=lec_no)
+        # Get units and academic years assigned via UnitOffering
+        offerings = UnitOffering.objects.filter(lecturer__employee_no=employee_no).select_related('unit', 'academic_year')
+        allowed_units = {
+            (offering.unit.unit_code, offering.academic_year.academic_year)
+            for offering in offerings
+        }
+
+        # Base queryset
         queryset = NominalRoll.objects.filter(
-            unit_code__in=[unit.unit_code for unit in lec_units]
+            unit_code__unit_code__in=[u for u, _ in allowed_units],
+            academic_year__academic_year__in=[y for _, y in allowed_units]
         )
 
         academic_year = self.request.GET.get('academic_year')
@@ -1312,7 +1109,7 @@ class Exam_NominalRollListView(ListView):
         if unit_code:
             queryset = queryset.filter(unit_code__unit_code=unit_code)
         if reg_no:
-            queryset = queryset.filter(reg_no=reg_no, unit_code=unit_code, academic_year=academic_year)
+            queryset = queryset.filter(reg_no=reg_no, unit_code__unit_code=unit_code, academic_year__academic_year=academic_year)
 
         return queryset.order_by(sort_field)
 
@@ -1320,207 +1117,34 @@ class Exam_NominalRollListView(ListView):
         context = super().get_context_data(**kwargs)
         context['academic_years'] = AcademicYear.objects.all()
         return context
-
-class COD_LoadNominalRollView(View):
-    def get(self, request):
-        form = UploadFileForm()
-        return render(request, 'cod_load_nominal_roll.html', {'form': form})
-
-    def post(self, request):
-        form = UploadFileForm(request.POST, request.FILES)
-        if form.is_valid():
-            file = request.FILES['file']
-            try:
-                # Read the CSV or Excel file
-                if file.name.endswith('.csv'):
-                    data = pd.read_csv(file)
-                elif file.name.endswith('.xlsx'):
-                    data = pd.read_excel(file)
-                else:
-                    messages.error(request, 'Invalid file format. Please upload a CSV or Excel file.')
-                    return render(request, 'cod_load_nominal_roll.html', {'form': form})
-
-                # Get the lecturer based on session username
-                username = request.session.get('username')
-                if not username:
-                    return redirect('login')  # Redirect to login if not logged in
-                lecturer = get_object_or_404(Lecturer, username=username)
-                lec_no = lecturer.lec_no
-
-                # Get unit codes related to the lecturer
-                related_units = LecturerUnit.objects.filter(lec_no=lec_no).values_list('unit_code', 'academic_year')
-                allowed_unit_codes = {(u[0], u[1]) for u in related_units}  # Set of tuples for fast lookup
-
-                # Initialize error list
-                errors = []
-
-                # Process each row
-                for index, row in data.iterrows():
-                    try:
-                        # Retrieve related instances
-                        unit = Unit.objects.get(unit_code=row['unit_code'])
-                        student = Student.objects.get(reg_no=row['reg_no'])
-                        academic_year = AcademicYear.objects.get(academic_year=row['academic_year'])
-
-                        # Check if the unit and academic year are allowed for this lecturer
-                        if (unit.unit_code, academic_year.academic_year) not in allowed_unit_codes:
-                            errors.append(f"Row {index + 1}: Unit {unit.unit_code} not assigned to this lecturer or wrong academic year.")
-                            continue
-
-                        # Check if entry already exists to avoid duplicates
-                        if NominalRoll.objects.filter(unit_code=unit, reg_no=student, academic_year=academic_year).exists():
-                            errors.append(f"Row {index + 1}: Duplicate entry in nominal roll for unit {unit.unit_code} and student {student.reg_no}.")
-                            continue
-
-                        # Create NominalRoll instance and save
-                        nominal_roll = NominalRoll(
-                            unit_code=unit,
-                            reg_no=student,
-                            academic_year=academic_year
-                        )
-                        nominal_roll.full_clean()  # Validate model instance
-                        nominal_roll.save()
-
-                    except (Unit.DoesNotExist, Student.DoesNotExist, AcademicYear.DoesNotExist):
-                        errors.append(f"Row {index + 1}: Foreign key reference not found (unit, student, or academic year).")
-                    except ValidationError as ve:
-                        errors.append(f"Row {index + 1}: {ve}")
-                    except Exception as e:
-                        errors.append(f"Row {index + 1}: Unexpected error - {str(e)}")
-
-                # Display success or error messages
-                if errors:
-                    for error in errors:
-                        messages.error(request, error)
-                else:
-                    messages.success(request, 'Nominal roll loaded successfully.')
-
-                return render(request, 'cod_load_nominal_roll.html', {'form': form})
-
-            except Exception as e:
-                messages.error(request, f'An error occurred while processing the file: {str(e)}')
-        else:
-            messages.error(request, 'Invalid form submission.')
-
-        return render(request, 'cod_load_nominal_roll.html', {'form': form})
-
-class COD_LoadResultView(View):
-    def get(self, request):
-        form = UploadFileForm()
-        return render(request, 'cod_load_result.html', {'form': form})
-
-    def post(self, request):
-        form = UploadFileForm(request.POST, request.FILES)
-        if form.is_valid():
-            file = request.FILES['file']
-            try:
-                # Load file into a DataFrame
-                if file.name.endswith('.csv'):
-                    data = pd.read_csv(file)
-                elif file.name.endswith('.xlsx'):
-                    data = pd.read_excel(file)
-                else:
-                    messages.error(request, 'Invalid file format. Please upload a CSV or Excel file.')
-                    return render(request, 'cod_load_result.html', {'form': form})
-
-                # Get the lecturer's username from session
-                username = request.session.get('username')
-                if not username:
-                    return redirect('login')  # Redirect to login if not logged in
-                lecturer = get_object_or_404(Lecturer, username=username)
-                lec_no = lecturer.lec_no
-
-                # Get the units and academic years assigned to this lecturer
-                related_units = LecturerUnit.objects.filter(lec_no=lec_no).values_list('unit_code', 'academic_year')
-                allowed_units = {(u[0], u[1]) for u in related_units}  # Set for fast lookup
-
-                errors = []
-
-                for index, row in data.iterrows():
-                    try:
-                        # Retrieve foreign key instances
-                        unit = Unit.objects.get(unit_code=row['unit_code'])
-                        student = Student.objects.get(reg_no=row['reg_no'])
-                        academic_year = AcademicYear.objects.get(academic_year=row['academic_year'])
-
-                        # Check if unit and academic year are allowed for this lecturer
-                        if (unit.unit_code, academic_year.academic_year) not in allowed_units:
-                            errors.append(f"Row {index + 1}: Unit {unit.unit_code} is not assigned to this lecturer.")
-                            continue
-
-                        # Check for duplicate entries
-                        if Result.objects.filter(unit_code=unit, reg_no=student, academic_year=academic_year).exists():
-                            errors.append(f"Row {index + 1}: Duplicate result entry for student {student.reg_no} in unit {unit.unit_code}.")
-                            continue
-
-                        # Check CAT and exam marks, ensuring they meet field constraints
-                        cat = row['cat']
-                        exam = row['exam']
-                        if not (0 <= cat <= 30):
-                            errors.append(f"Row {index + 1}: Invalid CAT mark ({cat}). It should be between 0 and 30.")
-                            continue
-                        if not (0 <= exam <= 70):
-                            errors.append(f"Row {index + 1}: Invalid exam mark ({exam}). It should be between 0 and 70.")
-                            continue
-
-                        # Create and validate the Result instance
-                        result = Result(
-                            unit_code=unit,
-                            reg_no=student,
-                            academic_year=academic_year,
-                            cat=cat,
-                            exam=exam
-                        )
-                        result.full_clean()  # Validate the instance
-                        result.save()  # Save to the database
-
-                    except (Unit.DoesNotExist, Student.DoesNotExist, AcademicYear.DoesNotExist):
-                        errors.append(f"Row {index + 1}: Foreign key references not found (unit, student, or academic year).")
-                    except ValidationError as ve:
-                        errors.append(f"Row {index + 1}: Validation error - {ve}")
-                    except Exception as e:
-                        errors.append(f"Row {index + 1}: Unexpected error - {str(e)}")
-
-                # Display error or success messages
-                if errors:
-                    for error in errors:
-                        messages.error(request, error)
-                else:
-                    messages.success(request, 'Results loaded successfully.')
-
-                return render(request, 'cod_load_result.html', {'form': form})
-
-            except Exception as e:
-                messages.error(request, f'An error occurred while processing the file: {str(e)}')
-        else:
-            messages.error(request, 'Invalid form submission.')
-
-        return render(request, 'cod_load_result.html', {'form': form})
-
+    
 class COD_ResultListView(ListView):
     model = Result
     template_name = 'cod_result_list.html'
     context_object_name = 'results'
 
     def get_queryset(self):
-        # Get lecturer's lec_no from session username
         username = self.request.session.get('username')
         lecturer = get_object_or_404(Lecturer, username=username)
+        employee_no = lecturer.employee_no
 
-        # Get lec_no associated with the lecturer
-        lec_no = lecturer.lec_no
-        lec_units = LecturerUnit.objects.filter(lec_no=lec_no)
+        # Get units and academic years assigned via UnitOffering
+        offerings = UnitOffering.objects.filter(lecturer__employee_no=employee_no).select_related('unit', 'academic_year')
+        allowed_units = {
+            (offering.unit.unit_code, offering.academic_year.academic_year)
+            for offering in offerings
+        }
 
-        # Base queryset filtered by lecturer's units
+        # Base queryset: results linked to units & years from offerings
         queryset = Result.objects.filter(
-            unit_code__in=[unit.unit_code for unit in lec_units]
+            unit_code__unit_code__in=[u for u, _ in allowed_units],
+            academic_year__academic_year__in=[y for _, y in allowed_units]
         )
 
-        # Filter by academic year, unit code, and reg_no if provided in request
         academic_year = self.request.GET.get('academic_year')
         unit_code = self.request.GET.get('unit_code')
         reg_no = self.request.GET.get('reg_no')
-        sort_field = self.request.GET.get('sort', 'reg_no')  # Default sort by reg_no
+        sort_field = self.request.GET.get('sort', 'reg_no')
 
         if academic_year:
             queryset = queryset.filter(academic_year__academic_year=academic_year)
@@ -1529,11 +1153,11 @@ class COD_ResultListView(ListView):
         if reg_no:
             queryset = queryset.filter(reg_no=reg_no)
 
-        return queryset.order_by(sort_field)  # Apply sorting
+        return queryset.order_by(sort_field)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['academic_years'] = AcademicYear.objects.all()  # To populate filter options
+        context['academic_years'] = AcademicYear.objects.all()
         return context
 
 class COD_NominalRollListView(ListView):
@@ -1544,12 +1168,19 @@ class COD_NominalRollListView(ListView):
     def get_queryset(self):
         username = self.request.session.get('username')
         lecturer = get_object_or_404(Lecturer, username=username)
+        employee_no = lecturer.employee_no
 
-        # Get lec_no associated with the lecturer
-        lec_no = lecturer.lec_no
-        lec_units = LecturerUnit.objects.filter(lec_no=lec_no)
+        # Get units and academic years assigned via UnitOffering
+        offerings = UnitOffering.objects.filter(lecturer__employee_no=employee_no).select_related('unit', 'academic_year')
+        allowed_units = {
+            (offering.unit.unit_code, offering.academic_year.academic_year)
+            for offering in offerings
+        }
+
+        # Base queryset
         queryset = NominalRoll.objects.filter(
-            unit_code__in=[unit.unit_code for unit in lec_units]
+            unit_code__unit_code__in=[u for u, _ in allowed_units],
+            academic_year__academic_year__in=[y for _, y in allowed_units]
         )
 
         academic_year = self.request.GET.get('academic_year')
@@ -1562,7 +1193,7 @@ class COD_NominalRollListView(ListView):
         if unit_code:
             queryset = queryset.filter(unit_code__unit_code=unit_code)
         if reg_no:
-            queryset = queryset.filter(reg_no=reg_no, unit_code=unit_code, academic_year=academic_year)
+            queryset = queryset.filter(reg_no=reg_no, unit_code__unit_code=unit_code, academic_year__academic_year=academic_year)
 
         return queryset.order_by(sort_field)
 
@@ -1570,3 +1201,4 @@ class COD_NominalRollListView(ListView):
         context = super().get_context_data(**kwargs)
         context['academic_years'] = AcademicYear.objects.all()
         return context
+

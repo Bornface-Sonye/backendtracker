@@ -1,15 +1,13 @@
-{% extends 'lecturer_base_dashboard.html' %}
+{% extends 'exam_base_dashboard.html' %}
 
 {% block content %}
-
-
 <div class="container mt-4">
     <h2>Load Nominal Roll</h2>
 
     <!-- Display messages -->
     {% if messages %}
         {% for message in messages %}
-            <div class="alert {% if message.tags == 'success' %}alert-success{% elif message.tags == 'error' %}alert-error{% endif %}">
+            <div class="alert {% if message.tags == 'success' %}alert-success{% elif message.tags == 'error' %}alert-danger{% endif %}">
                 {{ message }}
             </div>
         {% endfor %}
@@ -21,7 +19,7 @@
         <button type="submit" class="btn btn-primary">Load Nominal Roll</button>
     </form>
 
-    <h4>CSV/Excel Format Instructions</h4>
+    <h4 class="mt-4">CSV/Excel Format Instructions</h4>
     <p>Please ensure your file has the following format:</p>
     <ul>
         <li><strong>unit_code</strong>: The unit code associated with the nominal roll</li>
@@ -29,5 +27,33 @@
         <li><strong>academic_year</strong>: The academic year associated with the nominal roll</li>
     </ul>
     <p>The file must be in either CSV or Excel format.</p>
+
+    {% if preview_data %}
+        <hr>
+        <h4 class="mt-4">Preview Nominal Roll Data</h4>
+        <p class="text-muted">Only records from your school are shown. Confirm before submission.</p>
+        <table class="table table-bordered table-striped mt-3">
+            <thead class="thead-dark">
+                <tr>
+                    <th>Unit Code</th>
+                    <th>Reg No</th>
+                    <th>Academic Year</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in preview_data %}
+                    <tr>
+                        <td>{{ row.unit_code }}</td>
+                        <td>{{ row.reg_no }}</td>
+                        <td>{{ row.academic_year }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <form method="post" action="{% url 'submit-nominal-roll' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-success mt-3">Submit Nominal Roll</button>
+        </form>
+    {% endif %}
 </div>
 {% endblock %}

@@ -1,79 +1,65 @@
-{% extends 'lecturer_base_dashboard.html' %}
+{% extends 'exam_base_dashboard.html' %}
 
 {% block content %}
-    <style>
-        /* Styling for content */
-        form {
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            margin: 0 auto;
-            max-width: 600px;
-        }
+<div class="container mt-4">
+    <h2>Load Result</h2>
 
-        form button {
-            background-color: #007bff;
-            color: #fff;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: background-color 0.3s;
-        }
-
-        form button:hover {
-            background-color: #0056b3;
-        }
-
-        .alert {
-            padding: 10px;
-            margin-bottom: 15px;
-            border-radius: 5px;
-            font-size: 16px;
-            text-align: center;
-        }
-
-        .alert.success {
-            background-color: #d4edda;
-            color: #155724;
-        }
-
-        .alert.error {
-            background-color: #f8d7da;
-            color: #721c24;
-        }
-
-        .alert.warning {
-            background-color: #fff3cd;
-            color: #856404;
-        }
-    </style>
-
-    <h2>Load Results</h2>
+    <!-- Display messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert {% if message.tags == 'success' %}alert-success{% elif message.tags == 'error' %}alert-danger{% endif %}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
 
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
         {{ form.as_p }}
-        <button type="submit">Load Results</button>
+        <button type="submit" class="btn btn-primary">Load Result</button>
     </form>
 
-    <h4>CSV/Excel Format Instructions</h4>
+    <h4 class="mt-4">CSV/Excel Format Instructions</h4>
     <p>Please ensure your file has the following format:</p>
     <ul>
         <li><strong>unit_code</strong>: The unit code associated with the result</li>
         <li><strong>reg_no</strong>: The registration number of the student</li>
-        <li><strong>academic_year</strong>: The academic year of the result</li>
-        <li><strong>cat</strong>: The CAT score (integer)</li>
-        <li><strong>exam</strong>: The exam score (integer)</li>
+        <li><strong>academic_year</strong>: The academic year associated with the result</li>
+        <li><strong>cat</strong>: The CAT score (0-30)</li>
+        <li><strong>exam</strong>: The exam score (0-70)</li>
     </ul>
     <p>The file must be in either CSV or Excel format.</p>
-    <p>Ensure to put 0 for any missing mark.</p>
 
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert {{ message.tags }}">{{ message }}</div>
-        {% endfor %}
+    {% if preview_data %}
+        <hr>
+        <h4 class="mt-4">Preview Result Data</h4>
+        <p class="text-muted">Please confirm the data before submitting.</p>
+        <table class="table table-bordered table-striped mt-3">
+            <thead class="thead-dark">
+                <tr>
+                    <th>Unit Code</th>
+                    <th>Reg No</th>
+                    <th>Academic Year</th>
+                    <th>CAT</th>
+                    <th>Exam</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in preview_data %}
+                    <tr>
+                        <td>{{ row.unit_code }}</td>
+                        <td>{{ row.reg_no }}</td>
+                        <td>{{ row.academic_year }}</td>
+                        <td>{{ row.cat }}</td>
+                        <td>{{ row.exam }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <form method="post" action="{% url 'submit-result' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-success mt-3">Submit Confirmed Results</button>
+        </form>
     {% endif %}
+</div>
 {% endblock %}

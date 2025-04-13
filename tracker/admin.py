@@ -2,7 +2,7 @@
 from django.contrib import admin
 from .models import (
     School, Department, Program, Course, AcademicYear, Semester, YearOfStudy, Unit, Lecturer, Student,
-    UnitOffering, Complaint, Response, Result, NominalRoll, System_User, PasswordResetToken, LecturerUnit
+    UnitOffering, Complaint, Response, Result, NominalRoll, System_User, PasswordResetToken
 )
 
 @admin.register(School)
@@ -103,10 +103,4 @@ class PasswordResetTokenAdmin(admin.ModelAdmin):
     list_display = ('username', 'token')
     list_filter = ('username', 'token',)
     search_fields = ('username', 'token', 'created_at')
-
-@admin.register(LecturerUnit)
-class LecturerUnitAdmin(admin.ModelAdmin):
-    list_display = ('unit_code', 'employee_no', 'academic_year')
-    list_filter = ('unit_code', 'employee_no', 'academic_year')
-    search_fields = ('unit_code', 'employee_no', 'academic_year',)  
 
