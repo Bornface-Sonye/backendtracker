@@ -1,0 +1,297 @@
+.dashboard-container {
+    height: 100vh;
+    display: flex;
+    overflow: hidden;
+}
+
+.sidebar {
+    width: 250px;
+    background-color: #333;
+    transition: width 0.3s ease;
+}
+
+.sidebar-logo {
+    text-align: center;
+    padding: 15px 0;
+}
+
+.connect-image {
+    max-width: 60px;
+    height: auto;
+    border-radius: 8px; /* Smooth edges */
+}
+
+.sidebar.collapsed .connect-image {
+    display: none;
+}
+
+.sidebar.collapsed {
+    width: 70px;
+}
+
+.sidebar .list-unstyled {
+    padding: 0;
+}
+
+.sidebar a {
+    display: flex;
+    align-items: center;
+    padding: 10px 15px;
+    color: #d3d3d3;
+    font-weight: 500;
+    text-decoration: none;
+    background-color: #00008b;
+    transition: background-color 0.2s;
+}
+
+.sidebar a:hover {
+    background-color: #5f9ea0;
+}
+
+.submenu a {
+    background-color: #1a1a5e;
+}
+
+.submenu a:hover {
+    background-color: #5f9ea0;
+}
+
+.load-link {
+    background-color: #1a1a5e;
+}
+
+.main-content {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    overflow-y: auto;
+}
+
+.navbar {
+    background-color: #add8e6;
+    color: #333;
+}
+
+.header-logo {
+    max-width: 40px;
+    height: auto;
+    margin-right: 10px;
+    border-radius: 8px; /* Smooth edges */
+}
+
+.mmust-logo {
+    max-width: 200px;
+    height: auto;
+    margin-right: 10px;
+    border-radius: 8px; /* Smooth edges */
+}
+
+.hero-section {
+    padding: 20px;
+}
+
+button#toggleSidebar {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: #333;
+}
+
+/* Hide menu text and link text in collapsed mode */
+.collapsed .menu-text, 
+.collapsed .link-text {
+    display: none;
+}
+
+.collapsed .mmust-logo {
+    max-width: 50px;
+    max-height: 200px;
+    height: auto;
+    margin-left: 20px;
+    margin-right: 10px;
+    border-radius: 8px; /* Smooth edges */
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        position: absolute;
+        height: 100%;
+        z-index: 1000;
+    }
+}
+
+/*load nominal roll stylings*/
+    .container {
+        max-width: 600px;
+        padding: 20px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    h2 {
+        font-size: 24px;
+        font-weight: 600;
+        color: #343a40;
+        margin-bottom: 20px;
+    }
+
+    /* Message Styling */
+    .alert {
+        font-size: 16px;
+        padding: 10px;
+        margin-bottom: 20px;
+        border-radius: 5px;
+    }
+
+    .alert-success {
+        color: #155724;
+        background-color: #d4edda;
+        border: 1px solid #c3e6cb;
+    }
+
+    .alert-error {
+        color: #721c24;
+        background-color: #f8d7da;
+        border: 1px solid #f5c6cb;
+    }
+
+    form input[type="file"] {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ced4da;
+        border-radius: 5px;
+        font-size: 16px;
+        margin-bottom: 15px;
+    }
+
+    .btn-primary {
+        display: block;
+        width: 100%;
+        font-size: 18px;
+        padding: 10px;
+        background-color: #007bff;
+        border-color: #007bff;
+        font-weight: 500;
+        border-radius: 5px;
+        transition: background-color 0.3s ease;
+    }
+
+    .btn-primary:hover {
+        background-color: #0056b3;
+        border-color: #0056b3;
+    }
+
+/* Result list stylings */
+
+
+ body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h2 {
+            color: #343a40;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .filter-form {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .filter-form label {
+            margin-right: 10px;
+        }
+
+        .form-control {
+            margin: 0 5px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: white;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            border: 1px solid #dee2e6;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #007bff;
+            color: white;
+        }
+
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+
+        .no-results {
+            text-align: center;
+            font-weight: bold;
+            color: #dc3545;
+        }
+    
+/*Complaints List Stylings */
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f8; /* Light background color */
+    margin: 0; /* Remove default margin */
+    padding: 20px; /* Add padding for the body */
+}
+h1 {
+    color: #333; /* Dark color for the main heading */
+    text-align: center; /* Center the main heading */
+    margin-bottom: 20px; /* Space below the heading */
+}
+h2 {
+    color: #555; /* Slightly lighter color for subheadings */
+    margin-top: 40px; /* Space above subheadings */
+}
+table {
+    width: 100%; /* Full width of the table */
+    border-collapse: collapse; /* Collapse borders */
+    margin-top: 20px; /* Space above the table */
+}
+th, td {
+    padding: 8px 12px; /* Padding for cells */
+    border: 1px solid #ccc; /* Light gray border */
+    text-align: left; /* Align text to the left */
+}
+th {
+    background-color: #f4f4f4; /* Light gray background for headers */
+    font-weight: bold; /* Bold text for headers */
+    color: #333; /* Dark text color for headers */
+}
+tr:nth-child(even) {
+    background-color: #f9f9f9; /* Light background for even rows */
+}
+tr:hover {
+    background-color: #e0e0e0; /* Highlight row on hover */
+}
+a {
+    text-decoration: none; /* Remove underline from links */
+    color: #007bff; /* Bootstrap primary color */
+    font-weight: bold; /* Bold links for emphasis */
+}
+a:hover {
+    text-decoration: underline; /* Underline links on hover */
+}
+/* Responsive design adjustments */
+@media (max-width: 600px) {
+    table {
+        font-size: 14px; /* Smaller font size for small screens */
+    }
+    th, td {
+        padding: 6px 8px; /* Reduced padding for smaller screens */
+    }
+}
